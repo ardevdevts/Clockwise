@@ -49,7 +49,11 @@ class TasksPage extends ConsumerWidget {
               child: StreamBuilder<List<Project>>(
                 stream: database.watchProjects(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Show loading only if waiting AND no data yet
+                  final isLoading = !snapshot.hasData && 
+                                   snapshot.connectionState == ConnectionState.waiting;
+                  
+                  if (isLoading) {
                     return const Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
@@ -417,7 +421,11 @@ class ProjectTasksPage extends ConsumerWidget {
               child: StreamBuilder<List<Todo>>(
                 stream: database.watchRootTasksByProject(project.id),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Show loading only if waiting AND no data yet
+                  final isLoading = !snapshot.hasData && 
+                                   snapshot.connectionState == ConnectionState.waiting;
+                  
+                  if (isLoading) {
                     return const Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,

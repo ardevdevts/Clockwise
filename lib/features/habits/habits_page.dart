@@ -75,7 +75,11 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
               child: StreamBuilder<List<Habit>>(
                 stream: database.watchActiveHabits(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Show loading only if waiting AND no data yet
+                  final isLoading = !snapshot.hasData && 
+                                   snapshot.connectionState == ConnectionState.waiting;
+                  
+                  if (isLoading) {
                     return const Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
