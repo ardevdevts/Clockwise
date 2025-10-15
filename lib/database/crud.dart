@@ -171,12 +171,52 @@ class AppDatabase extends _$AppDatabase {
         .getSingleOrNull();
   }
 
+  // Watch habit log for specific habit and date (stream)
+  Stream<HabitLog?> watchHabitLogForDate(int habitId, DateTime date) {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+    return (select(habitLogs)
+          ..where((tbl) => 
+              tbl.habitId.equals(habitId) &
+              tbl.date.isBiggerOrEqualValue(startOfDay) & 
+              tbl.date.isSmallerOrEqualValue(endOfDay)))
+        .watchSingleOrNull();
+  }
+
   // Watch habit logs for a habit (stream)
   Stream<List<HabitLog>> watchHabitLogs(int habitId) {
     return (select(habitLogs)
           ..where((tbl) => tbl.habitId.equals(habitId))
           ..orderBy([(t) => OrderingTerm.desc(t.date)]))
         .watch();
+  }
+
+  // Get last habit log for a habit
+  Future<HabitLog?> getLastHabitLog(int habitId) {
+    return (select(habitLogs)
+          ..where((tbl) => tbl.habitId.equals(habitId))
+          ..orderBy([(t) => OrderingTerm.desc(t.date)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  // Upsert habit log (update if exists for the date, insert if not)
+  Future<void> upsertHabitLog(int habitId, DateTime date, double amount) async {
+    final existingLog = await getHabitLogForDate(habitId, date);
+    
+    if (existingLog != null) {
+      // Update existing log
+      await updateHabitLog(existingLog.copyWith(amount: amount));
+    } else {
+      // Insert new log
+      await insertHabitLog(
+        HabitLogsCompanion.insert(
+          habitId: habitId,
+          date: Value(date),
+          amount: Value(amount),
+        ),
+      );
+    }
   }
 
   // Delete habit log

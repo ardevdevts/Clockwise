@@ -6,7 +6,6 @@ import '../../core/theme/colors.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:intl/intl.dart';
 
-// Predefined habit colors
 const List<Color> habitColors = [
   Color(0xFF00ADEF), // BMW Blue
   Color(0xFF00BFA5), // Teal
@@ -489,7 +488,7 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
 }
 
 // Habit Card Widget
-class _HabitCard extends ConsumerWidget {
+class _HabitCard extends ConsumerStatefulWidget {
   final Habit habit;
   final DateTime selectedDate;
   final AppDatabase database;
@@ -507,13 +506,85 @@ class _HabitCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final habitColor = Color(int.parse('FF${habit.color}', radix: 16));
+  ConsumerState<_HabitCard> createState() => _HabitCardState();
+}
 
-    return FutureBuilder<HabitLog?>(
-      future: database.getHabitLogForDate(habit.id, selectedDate),
-      builder: (context, snapshot) {
-        final log = snapshot.data;
+class _HabitCardState extends ConsumerState<_HabitCard> {
+  // Optimistic state - stores the current state for this specific habit
+  HabitLog? _localLog;
+  bool _isInitialized = false;
+  HabitLog? _lastLog;
+  bool _isPendingOptimisticUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastLog();
+  }
+
+  @override
+  void didUpdateWidget(_HabitCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset initialization if the selected date changes
+    if (oldWidget.selectedDate != widget.selectedDate) {
+      _isInitialized = false;
+      _localLog = null;
+      _isPendingOptimisticUpdate = false;
+    }
+    // Reload last log if habit changes
+    if (oldWidget.habit.id != widget.habit.id) {
+      _loadLastLog();
+    }
+  }
+
+  Future<void> _loadLastLog() async {
+    try {
+      final lastLog = await widget.database.getLastHabitLog(widget.habit.id);
+      if (mounted) {
+        setState(() {
+          _lastLog = lastLog;
+        });
+      }
+    } catch (e) {
+      // Silently fail - _lastLog will remain null
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final habitColor = Color(int.parse('FF${widget.habit.color}', radix: 16));
+
+    return StreamBuilder<HabitLog?>(
+      stream: widget.database.watchHabitLogForDate(widget.habit.id, widget.selectedDate),
+      builder: (context, currentLogSnapshot) {
+        // Initialize local state from stream only once
+        if (!_isInitialized) {
+          if (currentLogSnapshot.hasData) {
+            _localLog = currentLogSnapshot.data;
+            _isInitialized = true;
+          } else if (currentLogSnapshot.connectionState != ConnectionState.waiting) {
+            _isInitialized = true;
+          }
+        } else if (!_isPendingOptimisticUpdate && currentLogSnapshot.connectionState == ConnectionState.active) {
+          // Only update from stream if we don't have a pending optimistic update
+          final streamLog = currentLogSnapshot.data;
+          _localLog = streamLog;
+        }
+        
+        // Clear pending flag after stream has stabilized
+        if (_isPendingOptimisticUpdate && currentLogSnapshot.connectionState == ConnectionState.active) {
+          // Wait one more frame to ensure DB operation completed
+          Future.microtask(() {
+            if (mounted) {
+              setState(() {
+                _isPendingOptimisticUpdate = false;
+              });
+            }
+          });
+        }
+        
+        // Always use local state for display
+        final log = _localLog;
         final isCompleted = log != null;
         final currentProgress = log?.amount ?? 0.0;
 
@@ -536,7 +607,7 @@ class _HabitCard extends ConsumerWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: onTap,
+              onTap: widget.onTap,
               borderRadius: BorderRadius.circular(12),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -564,7 +635,7 @@ class _HabitCard extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                habit.name,
+                                widget.habit.name,
                                 style: const TextStyle(
                                   color: AppColors.textPrimary,
                                   fontSize: 17,
@@ -572,10 +643,10 @@ class _HabitCard extends ConsumerWidget {
                                   letterSpacing: -0.2,
                                 ),
                               ),
-                              if (habit.description != null && habit.description!.isNotEmpty) ...[
+                              if (widget.habit.description != null && widget.habit.description!.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  habit.description!,
+                                  widget.habit.description!,
                                   style: const TextStyle(
                                     color: AppColors.textMuted,
                                     fontSize: 13,
@@ -590,7 +661,7 @@ class _HabitCard extends ConsumerWidget {
                         const SizedBox(width: 12),
 
                         // Completion indicator
-                        if (habit.goalType == 'boolean')
+                        if (widget.habit.goalType == 'boolean')
                           GestureDetector(
                             onTap: () => _toggleHabit(isCompleted, log),
                             child: Container(
@@ -626,8 +697,8 @@ class _HabitCard extends ConsumerWidget {
                               ),
                               child: Text(
                                 isCompleted 
-                                    ? '${currentProgress.toStringAsFixed(0)}/${habit.goalValue?.toStringAsFixed(0)}' 
-                                    : '0/${habit.goalValue?.toStringAsFixed(0)}',
+                                    ? '${currentProgress.toStringAsFixed(0)}/${widget.habit.goalValue?.toStringAsFixed(0)}' 
+                                    : '0/${widget.habit.goalValue?.toStringAsFixed(0)}',
                                 style: TextStyle(
                                   color: habitColor,
                                   fontSize: 13,
@@ -646,9 +717,9 @@ class _HabitCard extends ConsumerWidget {
                           offset: const Offset(-12, 0),
                           onSelected: (value) {
                             if (value == 'edit') {
-                              onEdit();
+                              widget.onEdit();
                             } else if (value == 'delete') {
-                              onDelete();
+                              widget.onDelete();
                             }
                           },
                           itemBuilder: (context) => [
@@ -682,20 +753,38 @@ class _HabitCard extends ConsumerWidget {
                     // Row 2: Contribution Grid (Full Width)
                     const SizedBox(height: 16),
                     _CompactContributionGrid(
-                      habit: habit,
-                      database: database,
+                      habit: widget.habit,
+                      database: widget.database,
                       habitColor: habitColor,
                     ),
                     
                     // Row 3: Goal info
-                    if (habit.goalType == 'unit' && habit.goalUnit != null) ...[
+                    if (widget.habit.goalType == 'unit' && widget.habit.goalUnit != null) ...[
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Icon(Icons.flag_outlined, size: 14, color: habitColor.withOpacity(0.7)),
                           const SizedBox(width: 6),
                           Text(
-                            'Goal: ${habit.goalValue?.toStringAsFixed(0)} ${habit.goalUnit}',
+                            'Goal: ${widget.habit.goalValue?.toStringAsFixed(0)} ${widget.habit.goalUnit}',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    
+                    // Row 4: Last completion time
+                    if (_lastLog != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.history, size: 14, color: habitColor.withOpacity(0.7)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Last completed: ${DateFormat('MMM d, y').format(_lastLog!.date)}',
                             style: TextStyle(
                               color: AppColors.textMuted,
                               fontSize: 12,
@@ -715,16 +804,47 @@ class _HabitCard extends ConsumerWidget {
   }
 
   void _toggleHabit(bool isCompleted, HabitLog? log) async {
-    if (isCompleted && log != null) {
-      await database.deleteHabitLogById(log.id);
-    } else {
-      await database.insertHabitLog(
-        HabitLogsCompanion.insert(
-          habitId: habit.id,
-          date: drift.Value(selectedDate),
-          amount: const drift.Value(1),
-        ),
-      );
+    // Optimistic update - update local state immediately
+    setState(() {
+      _isPendingOptimisticUpdate = true;
+      if (isCompleted && log != null) {
+        // Remove the log
+        _localLog = null;
+      } else {
+        // Add a log
+        _localLog = HabitLog(
+          id: log?.id ?? -1, // Use existing ID if updating, temp ID if new
+          habitId: widget.habit.id,
+          date: widget.selectedDate,
+          amount: 1,
+        );
+      }
+    });
+
+    // Perform database operation in background (fire and forget with error handling)
+    try {
+      if (isCompleted && log != null) {
+        await widget.database.deleteHabitLogById(log.id);
+      } else {
+        await widget.database.upsertHabitLog(widget.habit.id, widget.selectedDate, 1);
+      }
+      // Database operation succeeded, stream will update naturally
+    } catch (e) {
+      // On error, revert the optimistic update
+      if (mounted) {
+        setState(() {
+          _localLog = log; // Revert to previous state
+          _isPendingOptimisticUpdate = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update habit: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -746,7 +866,7 @@ class _HabitCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                habit.name,
+                widget.habit.name,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 20,
@@ -755,7 +875,7 @@ class _HabitCard extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Goal: ${habit.goalValue?.toStringAsFixed(0)} ${habit.goalUnit}',
+                'Goal: ${widget.habit.goalValue?.toStringAsFixed(0)} ${widget.habit.goalUnit}',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 24),
@@ -769,7 +889,7 @@ class _HabitCard extends ConsumerWidget {
                 ),
                 decoration: InputDecoration(
                   labelText: 'Amount',
-                  suffixText: habit.goalUnit,
+                  suffixText: widget.habit.goalUnit,
                   filled: true,
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
@@ -785,8 +905,33 @@ class _HabitCard extends ConsumerWidget {
                   if (log != null)
                     TextButton(
                       onPressed: () async {
-                        await database.deleteHabitLogById(log.id);
-                        if (context.mounted) Navigator.pop(context);
+                        // Close dialog and update local state immediately
+                        Navigator.pop(context);
+                        
+                        final previousLog = _localLog;
+                        setState(() {
+                          _isPendingOptimisticUpdate = true;
+                          _localLog = null;
+                        });
+                        
+                        try {
+                          await widget.database.deleteHabitLogById(log.id);
+                        } catch (e) {
+                          // Revert on error
+                          if (mounted) {
+                            setState(() {
+                              _localLog = previousLog;
+                              _isPendingOptimisticUpdate = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to clear habit: $e'),
+                                backgroundColor: AppColors.error,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        }
                       },
                       child: Text(
                         'Clear',
@@ -805,20 +950,42 @@ class _HabitCard extends ConsumerWidget {
                       final amount = double.tryParse(controller.text);
                       if (amount == null || amount <= 0) return;
 
-                      if (log != null) {
-                        await database.updateHabitLog(
-                          log.copyWith(amount: amount),
+                      // Close dialog immediately
+                      Navigator.pop(context);
+                      
+                      // Store previous state for rollback
+                      final previousLog = _localLog;
+                      
+                      // Update local state immediately
+                      setState(() {
+                        _isPendingOptimisticUpdate = true;
+                        _localLog = HabitLog(
+                          id: log?.id ?? -1,
+                          habitId: widget.habit.id,
+                          date: widget.selectedDate,
+                          amount: amount,
                         );
-                      } else {
-                        await database.insertHabitLog(
-                          HabitLogsCompanion.insert(
-                            habitId: habit.id,
-                            date: drift.Value(selectedDate),
-                            amount: drift.Value(amount),
-                          ),
-                        );
+                      });
+
+                      // Perform database operation in background
+                      try {
+                        await widget.database.upsertHabitLog(widget.habit.id, widget.selectedDate, amount);
+                      } catch (e) {
+                        // Revert on error
+                        if (mounted) {
+                          setState(() {
+                            _localLog = previousLog;
+                            _isPendingOptimisticUpdate = false;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to save habit: $e'),
+                              backgroundColor: AppColors.error,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       }
-                      if (context.mounted) Navigator.pop(context);
                     },
                   ),
                 ],
@@ -832,7 +999,7 @@ class _HabitCard extends ConsumerWidget {
 }
 
 // Compact Contribution Grid for Habit Card
-class _CompactContributionGrid extends StatelessWidget {
+class _CompactContributionGrid extends StatefulWidget {
   final Habit habit;
   final AppDatabase database;
   final Color habitColor;
@@ -844,28 +1011,65 @@ class _CompactContributionGrid extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<HabitLog>>(
-      future: _getLast6MonthsLogs(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(height: 60);
-        }
+  State<_CompactContributionGrid> createState() => _CompactContributionGridState();
+}
 
-        final logs = snapshot.data ?? [];
-        final logMap = <String, HabitLog>{};
-        for (final log in logs) {
-          final key = _dateKey(log.date);
-          logMap[key] = log;
-        }
+class _CompactContributionGridState extends State<_CompactContributionGrid> {
+  Map<String, HabitLog>? _logMap;
+  bool _isLoading = true;
 
-        return _buildFullWidthGrid(logMap);
-      },
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadLogs();
   }
 
-  Future<List<HabitLog>> _getLast6MonthsLogs() async {
-    return database.getHabitLogs(habit.id);
+  @override
+  void didUpdateWidget(_CompactContributionGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only reload if the habit ID changed
+    if (oldWidget.habit.id != widget.habit.id) {
+      _loadLogs();
+    }
+  }
+
+  Future<void> _loadLogs() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final logs = await widget.database.getHabitLogs(widget.habit.id);
+      if (!mounted) return;
+      
+      final logMap = <String, HabitLog>{};
+      for (final log in logs) {
+        final key = _dateKey(log.date);
+        logMap[key] = log;
+      }
+
+      setState(() {
+        _logMap = logMap;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _logMap = {};
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SizedBox(height: 60);
+    }
+
+    return _buildFullWidthGrid(_logMap ?? {});
   }
 
   Widget _buildFullWidthGrid(Map<String, HabitLog> logMap) {
@@ -943,7 +1147,7 @@ class _CompactContributionGrid extends StatelessWidget {
                               width: finalSquareSize,
                               height: finalSquareSize,
                               decoration: BoxDecoration(
-                                color: _getIntensityColor(completionPercent, habitColor),
+                                color: _getIntensityColor(completionPercent, widget.habitColor),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -969,7 +1173,6 @@ class _CompactContributionGrid extends StatelessWidget {
     for (int i = 0; i < weeks; i++) {
       final date = startDate.add(Duration(days: i * 7));
       final monthKey = '${date.year}-${date.month}';
-      final monthName = DateFormat('MMM yyyy').format(date);
       
       if (!monthWidths.containsKey(monthKey)) {
         monthWidths[monthKey] = 0;
@@ -1004,10 +1207,10 @@ class _CompactContributionGrid extends StatelessWidget {
   double _getCompletionPercent(HabitLog? log) {
     if (log == null) return 0;
     
-    if (habit.goalType == 'boolean') {
+    if (widget.habit.goalType == 'boolean') {
       return 100;
-    } else if (habit.goalValue != null && habit.goalValue! > 0) {
-      final percent = (log.amount / habit.goalValue!) * 100;
+    } else if (widget.habit.goalValue != null && widget.habit.goalValue! > 0) {
+      final percent = (log.amount / widget.habit.goalValue!) * 100;
       return percent.clamp(0, 100);
     }
     
@@ -1342,8 +1545,6 @@ class _ContributionGrid extends StatelessWidget {
   }
 
   Future<List<HabitLog>> _getLast90DaysLogs() async {
-    final now = DateTime.now();
-    final startDate = now.subtract(const Duration(days: 90));
     return database.getHabitLogs(habit.id);
   }
 
@@ -1676,15 +1877,6 @@ class _DaySelector extends StatelessWidget {
   });
 
   static const List<String> dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  static const List<String> fullDayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday'
-  ];
 
   @override
   Widget build(BuildContext context) {
