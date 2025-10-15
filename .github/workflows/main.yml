@@ -2,11 +2,11 @@ name: Flutter CI (Windows + Android)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
     tags:
       - 'v*'   # 🔥 Triggers when a version tag like v1.0.0 or v2.0 is pushed
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build:
