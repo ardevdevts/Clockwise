@@ -1,8 +1,9 @@
 import 'package:financialtracker/core/routes/routes.dart';
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() {
-  runApp(const MyApp());
+  runApp(ProviderScope(child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
