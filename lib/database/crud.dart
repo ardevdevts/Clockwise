@@ -126,6 +126,11 @@ class AppDatabase extends _$AppDatabase {
     return (select(todos)..where((tbl) => tbl.parentId.equals(parentId))).watch();
   }
 
+  // Watch a single todo by ID (stream)
+  Stream<Todo?> watchTodoById(int id) {
+    return (select(todos)..where((tbl) => tbl.id.equals(id))).watchSingleOrNull();
+  }
+
   // HABIT-SPECIFIC QUERIES
 
   // Get active (non-archived) habits

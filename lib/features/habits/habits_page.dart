@@ -5,6 +5,7 @@ import '../../database/crud.dart';
 import '../../core/theme/colors.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:intl/intl.dart';
+import '../../core/services/service_providers.dart';
 
 const List<Color> habitColors = [
   Color(0xFF00ADEF), // BMW Blue
@@ -1322,15 +1323,22 @@ class _DateSelector extends StatelessWidget {
 }
 
 // Habit Detail Page
-class HabitDetailPage extends ConsumerWidget {
+class HabitDetailPage extends ConsumerStatefulWidget {
   final Habit habit;
 
   const HabitDetailPage({super.key, required this.habit});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HabitDetailPage> createState() => _HabitDetailPageState();
+}
+
+class _HabitDetailPageState extends ConsumerState<HabitDetailPage> {
+  final GlobalKey<_HabitRemindersListState> _remindersListKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
     final database = ref.watch(databaseProvider);
-    final habitColor = Color(int.parse('FF${habit.color}', radix: 16));
+    final habitColor = Color(int.parse('FF${widget.habit.color}', radix: 16));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -1361,7 +1369,7 @@ class HabitDetailPage extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      habit.name,
+                      widget.habit.name,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 28,
@@ -1391,7 +1399,7 @@ class HabitDetailPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   _ContributionGrid(
-                    habit: habit,
+                    habit: widget.habit,
                     database: database,
                     habitColor: habitColor,
                   ),
@@ -1400,6 +1408,50 @@ class HabitDetailPage extends ConsumerWidget {
             ),
 
             const SizedBox(height: 24),
+            Container(
+              height: 0.5,
+              color: AppColors.border,
+            ),
+            const SizedBox(height: 16),
+
+            // Reminders
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  const Text(
+                    'Reminders',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () async {
+                      final saved = await _showAddHabitReminderDialog(context, ref);
+                      if (saved) {
+                        _remindersListKey.currentState?._loadReminders();
+                      }
+                    },
+                    icon: const Icon(Icons.add, color: AppColors.textSecondary, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: _HabitRemindersList(
+                key: _remindersListKey,
+                habitId: widget.habit.id,
+              ),
+            ),
+
+            const SizedBox(height: 16),
             Container(
               height: 0.5,
               color: AppColors.border,
@@ -1423,7 +1475,7 @@ class HabitDetailPage extends ConsumerWidget {
 
             Expanded(
               child: StreamBuilder<List<HabitLog>>(
-                stream: database.watchHabitLogs(habit.id),
+                stream: database.watchHabitLogs(widget.habit.id),
                 builder: (context, snapshot) {
                   final logs = snapshot.data ?? [];
 
@@ -1442,8 +1494,8 @@ class HabitDetailPage extends ConsumerWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 1),
                     itemBuilder: (context, index) {
                       final log = logs[index];
-                      final completionPercent = habit.goalType == 'unit' && habit.goalValue != null
-                          ? (log.amount / habit.goalValue!) * 100
+                      final completionPercent = widget.habit.goalType == 'unit' && widget.habit.goalValue != null
+                          ? (log.amount / widget.habit.goalValue!) * 100
                           : 100.0;
                       
                       return Container(
@@ -1472,11 +1524,11 @@ class HabitDetailPage extends ConsumerWidget {
                               ),
                             ),
                             const Spacer(),
-                            if (habit.goalType == 'unit')
+                            if (widget.habit.goalType == 'unit')
                               Row(
                                 children: [
                                   Text(
-                                    '${log.amount.toStringAsFixed(0)} ${habit.goalUnit}',
+                                    '${log.amount.toStringAsFixed(0)} ${widget.habit.goalUnit}',
                                     style: TextStyle(
                                       color: habitColor,
                                       fontSize: 15,
@@ -1506,6 +1558,344 @@ class HabitDetailPage extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Future<bool> _showAddHabitReminderDialog(BuildContext context, WidgetRef ref) async {
+    final reminderService = ref.read(reminderServiceProvider);
+    
+    // Load existing reminders
+    final existingReminders = await reminderService.getHabitReminders(widget.habit.id);
+    final List<ReminderTimeData> reminderTimes = existingReminders.map((r) {
+      return ReminderTimeData(
+        id: r.id,
+        time: TimeOfDay.fromDateTime(r.remindAt),
+      );
+    }).toList();
+    
+    TimeOfDay newTime = TimeOfDay.now();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: AppColors.elevatedSurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Habit Reminders',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Add or edit reminders for this habit',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                ),
+                const SizedBox(height: 24),
+                
+                // List of reminder times
+                if (reminderTimes.isNotEmpty) ...[
+                  ...reminderTimes.map((reminderData) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.border, width: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time, size: 18, color: AppColors.accentBlue),
+                        const SizedBox(width: 12),
+                        Text(
+                          reminderData.time.format(context),
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                        ),
+                        const Spacer(),
+                        // Edit button
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.accentBlue),
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                          onPressed: () async {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: reminderData.time,
+                              builder: (context, child) {
+                                return Theme(
+                                  data: ThemeData.dark().copyWith(
+                                    colorScheme: const ColorScheme.dark(
+                                      primary: AppColors.accentBlue,
+                                      surface: AppColors.elevatedSurface,
+                                    ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (time != null) {
+                              setState(() {
+                                reminderData.time = time;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        // Delete button
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            setState(() {
+                              reminderTimes.remove(reminderData);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  )),
+                  const SizedBox(height: 16),
+                ],
+                
+                // Add time button
+                GestureDetector(
+                  onTap: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: newTime,
+                      builder: (context, child) {
+                        return Theme(
+                          data: ThemeData.dark().copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: AppColors.accentBlue,
+                              surface: AppColors.elevatedSurface,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (time != null) {
+                      setState(() {
+                        reminderTimes.add(ReminderTimeData(time: time));
+                        newTime = time;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentBlue.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.accentBlue, width: 1),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add, size: 18, color: AppColors.accentBlue),
+                        SizedBox(width: 8),
+                        Text(
+                          'Add Reminder Time',
+                          style: TextStyle(color: AppColors.accentBlue, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                    const SizedBox(width: 12),
+                    _MinimalButton(
+                      label: 'Save',
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        
+                        // Delete removed reminders
+                        for (final existingReminder in existingReminders) {
+                          final stillExists = reminderTimes.any((r) => r.id == existingReminder.id);
+                          if (!stillExists) {
+                            await reminderService.removeReminder(existingReminder.id);
+                          }
+                        }
+                        
+                        // Update or create reminders
+                        for (final reminderData in reminderTimes) {
+                          var reminderTime = DateTime(
+                            now.year,
+                            now.month,
+                            now.day,
+                            reminderData.time.hour,
+                            reminderData.time.minute,
+                          );
+                          
+                          // If time has passed today, schedule for tomorrow
+                          if (reminderTime.isBefore(now)) {
+                            reminderTime = reminderTime.add(const Duration(days: 1));
+                          }
+                          
+                          if (reminderData.id != null) {
+                            // Update existing reminder
+                            final existingReminder = existingReminders.firstWhere((r) => r.id == reminderData.id);
+                            final database = ref.read(databaseProvider);
+                            await database.updateReminder(
+                              existingReminder.copyWith(remindAt: reminderTime),
+                            );
+                            // Reschedule notification
+                            final habit = await database.getHabitById(widget.habit.id);
+                            if (habit != null) {
+                              final notificationService = ref.read(notificationServiceProvider);
+                              final notificationId = (widget.habit.id * 100000 + reminderData.id!).hashCode.abs();
+                              await notificationService.scheduleHabitReminder(habit, reminderTime, notificationId);
+                            }
+                          } else {
+                            // Create new reminder
+                            await reminderService.addHabitReminder(
+                              widget.habit.id,
+                              reminderTime,
+                              recurring: true,
+                            );
+                          }
+                        }
+                        
+                        if (context.mounted) Navigator.pop(context, true);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    
+    return result ?? false;
+  }
+}
+
+// Helper class to track reminder data
+class ReminderTimeData {
+  final int? id; // null for new reminders
+  TimeOfDay time;
+  
+  ReminderTimeData({this.id, required this.time});
+}
+
+// Habit Reminders List Widget
+class _HabitRemindersList extends ConsumerStatefulWidget {
+  final int habitId;
+
+  const _HabitRemindersList({super.key, required this.habitId});
+
+  @override
+  ConsumerState<_HabitRemindersList> createState() => _HabitRemindersListState();
+}
+
+class _HabitRemindersListState extends ConsumerState<_HabitRemindersList> {
+  List<Reminder> _reminders = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReminders();
+  }
+
+  Future<void> _loadReminders() async {
+    setState(() => _isLoading = true);
+    final reminderService = ref.read(reminderServiceProvider);
+    final reminders = await reminderService.getHabitReminders(widget.habitId);
+    if (mounted) {
+      setState(() {
+        _reminders = reminders;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SizedBox(
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+          ),
+        ),
+      );
+    }
+
+    if (_reminders.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: _reminders.map((reminder) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.border, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.notifications_outlined, size: 18, color: AppColors.accentBlue),
+              const SizedBox(width: 12),
+              Text(
+                DateFormat('hh:mm a').format(reminder.remindAt),
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              ),
+              const SizedBox(width: 8),
+              if (reminder.recurring)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentBlue.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Daily',
+                    style: TextStyle(color: AppColors.accentBlue, fontSize: 11),
+                  ),
+                ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.zero,
+                onPressed: () async {
+                  final reminderService = ref.read(reminderServiceProvider);
+                  await reminderService.removeReminder(reminder.id);
+                  await _loadReminders(); // Refresh the list
+                },
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -1928,3 +2318,5 @@ class _DaySelector extends StatelessWidget {
     );
   }
 }
+
+

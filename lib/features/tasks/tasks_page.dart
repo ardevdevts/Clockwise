@@ -5,6 +5,8 @@ import '../../database/crud.dart';
 import '../../database.dart' show Priority;
 import '../../core/theme/colors.dart';
 import 'package:drift/drift.dart' as drift;
+import '../../core/services/service_providers.dart';
+import 'package:intl/intl.dart';
 
 class TasksPage extends ConsumerWidget {
   const TasksPage({super.key});
@@ -565,50 +567,63 @@ class ProjectTasksPage extends ConsumerWidget {
 }
 
 // Task Detail Page
-class TaskDetailPage extends ConsumerWidget {
+class TaskDetailPage extends ConsumerStatefulWidget {
   final Todo task;
   final Project project;
 
   const TaskDetailPage({super.key, required this.task, required this.project});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TaskDetailPage> createState() => _TaskDetailPageState();
+}
+
+class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
+  final GlobalKey<_TaskRemindersListState> _remindersListKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
     final database = ref.watch(databaseProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => _showEditTaskDialog(context, database),
-                    icon: const Icon(Icons.edit_outlined, color: AppColors.textPrimary, size: 22),
-                  ),
-                  IconButton(
-                    onPressed: () => _deleteTask(context, database),
-                    icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 22),
-                  ),
-                ],
-              ),
-            ),
+    return StreamBuilder<Todo?>(
+      stream: database.watchTodoById(widget.task.id),
+      initialData: widget.task,
+      builder: (context, snapshot) {
+        final task = snapshot.data ?? widget.task;
 
-            // Task Details
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => _showEditTaskDialog(context, database),
+                        icon: const Icon(Icons.edit_outlined, color: AppColors.textPrimary, size: 22),
+                      ),
+                      IconButton(
+                        onPressed: () => _deleteTask(context, database),
+                        icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 22),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Task Details
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -676,6 +691,45 @@ class TaskDetailPage extends ConsumerWidget {
               ),
             ),
 
+            // Reminders Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  const Text(
+                    'Reminders',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () async {
+                      final saved = await _showAddReminderDialog(context, ref);
+                      if (saved) {
+                        _remindersListKey.currentState?._loadReminders();
+                      }
+                    },
+                    icon: const Icon(Icons.add, color: AppColors.textSecondary, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Reminders List
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: _TaskRemindersList(
+                key: _remindersListKey,
+                taskId: task.id,
+              ),
+            ),
+
             // Subtasks Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -732,7 +786,7 @@ class TaskDetailPage extends ConsumerWidget {
                             MaterialPageRoute(
                               builder: (context) => TaskDetailPage(
                                 task: subtasks[index],
-                                project: project,
+                                project: widget.project,
                               ),
                             ),
                           );
@@ -746,13 +800,15 @@ class TaskDetailPage extends ConsumerWidget {
           ],
         ),
       ),
+        );
+      },
     );
   }
 
   void _showEditTaskDialog(BuildContext context, AppDatabase database) {
-    final titleController = TextEditingController(text: task.title);
-    final descriptionController = TextEditingController(text: task.description ?? '');
-    Priority selectedPriority = task.priority;
+    final titleController = TextEditingController(text: widget.task.title);
+    final descriptionController = TextEditingController(text: widget.task.description ?? '');
+    Priority selectedPriority = widget.task.priority;
 
     showDialog(
       context: context,
@@ -805,7 +861,7 @@ class TaskDetailPage extends ConsumerWidget {
                       onPressed: () async {
                         if (titleController.text.trim().isEmpty) return;
                         await database.updateTodo(
-                          task.copyWith(
+                          widget.task.copyWith(
                             title: titleController.text.trim(),
                             description: drift.Value(descriptionController.text.trim().isEmpty
                                 ? null
@@ -884,8 +940,8 @@ class TaskDetailPage extends ConsumerWidget {
                         if (titleController.text.trim().isEmpty) return;
                         await database.insertTodo(
                           TodosCompanion.insert(
-                            projectId: task.projectId,
-                            parentId: drift.Value(task.id),
+                            projectId: widget.task.projectId,
+                            parentId: drift.Value(widget.task.id),
                             title: titleController.text.trim(),
                             description: drift.Value(descriptionController.text.trim().isEmpty
                                 ? null
@@ -944,7 +1000,7 @@ class TaskDetailPage extends ConsumerWidget {
                   _MinimalButton(
                     label: 'Delete',
                     onPressed: () async {
-                      await database.deleteTodo(task.id);
+                      await database.deleteTodo(widget.task.id);
                       if (context.mounted) {
                         Navigator.pop(context);
                         Navigator.pop(context);
@@ -960,9 +1016,246 @@ class TaskDetailPage extends ConsumerWidget {
       ),
     );
   }
+
+  Future<bool> _showAddReminderDialog(BuildContext context, WidgetRef ref) async {
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: AppColors.elevatedSurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Add Reminder',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Date selector
+                GestureDetector(
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      builder: (context, child) {
+                        return Theme(
+                          data: ThemeData.dark().copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: AppColors.accentBlue,
+                              surface: AppColors.elevatedSurface,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (date != null) {
+                      setState(() => selectedDate = date);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.border, width: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 12),
+                        Text(
+                          DateFormat('MMM dd, yyyy').format(selectedDate),
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Time selector
+                GestureDetector(
+                  onTap: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                      builder: (context, child) {
+                        return Theme(
+                          data: ThemeData.dark().copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: AppColors.accentBlue,
+                              surface: AppColors.elevatedSurface,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (time != null) {
+                      setState(() => selectedTime = time);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.border, width: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.access_time, size: 18, color: AppColors.textSecondary),
+                        const SizedBox(width: 12),
+                        Text(
+                          selectedTime.format(context),
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                    const SizedBox(width: 12),
+                    _MinimalButton(
+                      label: 'Add',
+                      onPressed: () async {
+                        final reminderService = ref.read(reminderServiceProvider);
+                        final reminderTime = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
+                        await reminderService.addTaskReminder(widget.task.id, reminderTime);
+                        if (context.mounted) Navigator.pop(context, true);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    
+    return result ?? false;
+  }
 }
 
-// Task Item Widget
+// Task Reminders List Widget
+class _TaskRemindersList extends ConsumerStatefulWidget {
+  final int taskId;
+
+  const _TaskRemindersList({super.key, required this.taskId});
+
+  @override
+  ConsumerState<_TaskRemindersList> createState() => _TaskRemindersListState();
+}
+
+class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
+  List<Reminder> _reminders = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReminders();
+  }
+
+  Future<void> _loadReminders() async {
+    setState(() => _isLoading = true);
+    final reminderService = ref.read(reminderServiceProvider);
+    final reminders = await reminderService.getTaskReminders(widget.taskId);
+    if (mounted) {
+      setState(() {
+        _reminders = reminders;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SizedBox(
+        height: 40,
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+          ),
+        ),
+      );
+    }
+
+    if (_reminders.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: _reminders.map((reminder) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.border, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.notifications_outlined, size: 18, color: AppColors.accentBlue),
+              const SizedBox(width: 12),
+              Text(
+                DateFormat('MMM dd, yyyy - hh:mm a').format(reminder.remindAt),
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.zero,
+                onPressed: () async {
+                  final reminderService = ref.read(reminderServiceProvider);
+                  await reminderService.removeReminder(reminder.id);
+                  await _loadReminders(); // Refresh the list
+                },
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
 class _TaskItem extends StatelessWidget {
   final Todo task;
   final AppDatabase database;
@@ -1136,7 +1429,7 @@ class _PrioritySelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: Priority.values.map((priority) {
-        final isSelected = priority == selected;
+        final isSelected = Priority == selected;
         return Padding(
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(
@@ -1217,3 +1510,5 @@ String _priorityLabel(Priority priority) {
       return 'Low';
   }
 }
+
+

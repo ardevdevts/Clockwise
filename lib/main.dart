@@ -2,8 +2,19 @@ import 'package:financialtracker/core/routes/routes.dart';
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/workmanager_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+  await notificationService.requestPermissions();
+  
+  final workManagerService = WorkManagerService();
+  await workManagerService.initialize();
+  
   runApp(ProviderScope(child: const MyApp()));
 }
 
