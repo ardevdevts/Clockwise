@@ -3,6 +3,8 @@ import 'colors.dart';
 
 final ThemeData themeDark = ThemeData(
   brightness: Brightness.dark,
+  fontFamily: 'Sora',
+  
   scaffoldBackgroundColor: AppColors.background,
   colorScheme: const ColorScheme.dark(
     primary: AppColors.accentBlue,
@@ -13,9 +15,9 @@ final ThemeData themeDark = ThemeData(
   cardColor: AppColors.surface,
   dividerColor: AppColors.border,
   textTheme: const TextTheme(
-    bodyLarge: TextStyle(color: AppColors.textPrimary),
-    bodyMedium: TextStyle(color: AppColors.textSecondary),
-    labelSmall: TextStyle(color: AppColors.textMuted),
+    bodyLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w400, fontSize: 16),
+    bodyMedium: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w500, fontSize: 14),
+    labelSmall: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 12),
   ),
   iconTheme: const IconThemeData(color: AppColors.textSecondary),
   appBarTheme: const AppBarTheme(
