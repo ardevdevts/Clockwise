@@ -20,9 +20,7 @@ class CustomNavbar extends StatelessWidget {
     final double itemWidth = MediaQuery.of(context).size.width / numberOfDestinations;
     const double indicatorWidth = 20;
 
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: Container(
+    return Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.grey, width: 0.3)),
         ),
@@ -77,7 +75,6 @@ class CustomNavbar extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

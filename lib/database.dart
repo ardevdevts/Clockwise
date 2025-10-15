@@ -1,10 +1,4 @@
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
-import 'package:path_provider/path_provider.dart';
-
-part 'database.g.dart';
-
-
 
 @DataClassName('Project')
 class Projects extends Table {
@@ -19,6 +13,7 @@ class Todos extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get projectId =>
       integer().references(Projects, #id, onDelete: KeyAction.cascade)();
+  IntColumn get parentId => integer().nullable().customConstraint("NULL REFERENCES todos(id)")();
   TextColumn get title => text().withLength(min: 1, max: 150)();
   TextColumn get description => text().nullable()();
   TextColumn get notes => text().nullable()();
@@ -35,8 +30,11 @@ class Habits extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 100)();
   TextColumn get description => text().nullable()();
+  TextColumn get color => text().withLength(min: 6, max: 9)(); // Hex color code
   TextColumn get interval =>
-      text().withLength(min: 1, max: 20)(); // daily, weekly, etc.
+      text().withLength(min: 1, max: 20)(); // daily, weekly, custom, interval
+  TextColumn get customDays => text().nullable()(); // Comma-separated days: 0=Sun, 1=Mon, etc.
+  IntColumn get intervalDays => integer().nullable()(); // For "every N days"
   TextColumn get goalType => text().withLength(min: 1, max: 20)(); // 'unit' | 'boolean'
   RealColumn get goalValue => real().nullable()(); // numeric goal for unit type
   TextColumn get goalUnit => text().nullable()(); // e.g., liters, kg, reps
@@ -68,20 +66,3 @@ class Reminders extends Table {
 
 enum Priority { low, medium, high, urgent }
 enum GoalType { unit, boolean }
-
-@DriftDatabase(tables: [Projects, Todos, Habits, HabitLogs, Reminders])
-class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
-  @override
-  int get schemaVersion => 1;
-
-  static QueryExecutor _openConnection() {
-    return driftDatabase(
-      name: 'my_database',
-      native: const DriftNativeOptions(
-        databaseDirectory: getApplicationSupportDirectory,
-      ),
-    );
-}
-}
-

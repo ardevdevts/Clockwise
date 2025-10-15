@@ -340,6 +340,18 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
       'REFERENCES projects (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _parentIdMeta = const VerificationMeta(
+    'parentId',
+  );
+  @override
+  late final GeneratedColumn<int> parentId = GeneratedColumn<int>(
+    'parent_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    $customConstraints: 'NULL REFERENCES todos(id)',
+  );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -433,6 +445,7 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
   List<GeneratedColumn> get $columns => [
     id,
     projectId,
+    parentId,
     title,
     description,
     notes,
@@ -464,6 +477,12 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
       );
     } else if (isInserting) {
       context.missing(_projectIdMeta);
+    }
+    if (data.containsKey('parent_id')) {
+      context.handle(
+        _parentIdMeta,
+        parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta),
+      );
     }
     if (data.containsKey('title')) {
       context.handle(
@@ -529,6 +548,10 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
         DriftSqlType.int,
         data['${effectivePrefix}project_id'],
       )!,
+      parentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parent_id'],
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -578,6 +601,7 @@ class $TodosTable extends Todos with TableInfo<$TodosTable, Todo> {
 class Todo extends DataClass implements Insertable<Todo> {
   final int id;
   final int projectId;
+  final int? parentId;
   final String title;
   final String? description;
   final String? notes;
@@ -589,6 +613,7 @@ class Todo extends DataClass implements Insertable<Todo> {
   const Todo({
     required this.id,
     required this.projectId,
+    this.parentId,
     required this.title,
     this.description,
     this.notes,
@@ -603,6 +628,9 @@ class Todo extends DataClass implements Insertable<Todo> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['project_id'] = Variable<int>(projectId);
+    if (!nullToAbsent || parentId != null) {
+      map['parent_id'] = Variable<int>(parentId);
+    }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
@@ -630,6 +658,9 @@ class Todo extends DataClass implements Insertable<Todo> {
     return TodosCompanion(
       id: Value(id),
       projectId: Value(projectId),
+      parentId: parentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentId),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -657,6 +688,7 @@ class Todo extends DataClass implements Insertable<Todo> {
     return Todo(
       id: serializer.fromJson<int>(json['id']),
       projectId: serializer.fromJson<int>(json['projectId']),
+      parentId: serializer.fromJson<int?>(json['parentId']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       notes: serializer.fromJson<String?>(json['notes']),
@@ -675,6 +707,7 @@ class Todo extends DataClass implements Insertable<Todo> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'projectId': serializer.toJson<int>(projectId),
+      'parentId': serializer.toJson<int?>(parentId),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'notes': serializer.toJson<String?>(notes),
@@ -691,6 +724,7 @@ class Todo extends DataClass implements Insertable<Todo> {
   Todo copyWith({
     int? id,
     int? projectId,
+    Value<int?> parentId = const Value.absent(),
     String? title,
     Value<String?> description = const Value.absent(),
     Value<String?> notes = const Value.absent(),
@@ -702,6 +736,7 @@ class Todo extends DataClass implements Insertable<Todo> {
   }) => Todo(
     id: id ?? this.id,
     projectId: projectId ?? this.projectId,
+    parentId: parentId.present ? parentId.value : this.parentId,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
     notes: notes.present ? notes.value : this.notes,
@@ -715,6 +750,7 @@ class Todo extends DataClass implements Insertable<Todo> {
     return Todo(
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
+      parentId: data.parentId.present ? data.parentId.value : this.parentId,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -733,6 +769,7 @@ class Todo extends DataClass implements Insertable<Todo> {
     return (StringBuffer('Todo(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
+          ..write('parentId: $parentId, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('notes: $notes, ')
@@ -749,6 +786,7 @@ class Todo extends DataClass implements Insertable<Todo> {
   int get hashCode => Object.hash(
     id,
     projectId,
+    parentId,
     title,
     description,
     notes,
@@ -764,6 +802,7 @@ class Todo extends DataClass implements Insertable<Todo> {
       (other is Todo &&
           other.id == this.id &&
           other.projectId == this.projectId &&
+          other.parentId == this.parentId &&
           other.title == this.title &&
           other.description == this.description &&
           other.notes == this.notes &&
@@ -777,6 +816,7 @@ class Todo extends DataClass implements Insertable<Todo> {
 class TodosCompanion extends UpdateCompanion<Todo> {
   final Value<int> id;
   final Value<int> projectId;
+  final Value<int?> parentId;
   final Value<String> title;
   final Value<String?> description;
   final Value<String?> notes;
@@ -788,6 +828,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   const TodosCompanion({
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
+    this.parentId = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.notes = const Value.absent(),
@@ -800,6 +841,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   TodosCompanion.insert({
     this.id = const Value.absent(),
     required int projectId,
+    this.parentId = const Value.absent(),
     required String title,
     this.description = const Value.absent(),
     this.notes = const Value.absent(),
@@ -814,6 +856,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   static Insertable<Todo> custom({
     Expression<int>? id,
     Expression<int>? projectId,
+    Expression<int>? parentId,
     Expression<String>? title,
     Expression<String>? description,
     Expression<String>? notes,
@@ -826,6 +869,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
+      if (parentId != null) 'parent_id': parentId,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (notes != null) 'notes': notes,
@@ -840,6 +884,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
   TodosCompanion copyWith({
     Value<int>? id,
     Value<int>? projectId,
+    Value<int?>? parentId,
     Value<String>? title,
     Value<String?>? description,
     Value<String?>? notes,
@@ -852,6 +897,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     return TodosCompanion(
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
+      parentId: parentId ?? this.parentId,
       title: title ?? this.title,
       description: description ?? this.description,
       notes: notes ?? this.notes,
@@ -871,6 +917,9 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     }
     if (projectId.present) {
       map['project_id'] = Variable<int>(projectId.value);
+    }
+    if (parentId.present) {
+      map['parent_id'] = Variable<int>(parentId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -906,6 +955,7 @@ class TodosCompanion extends UpdateCompanion<Todo> {
     return (StringBuffer('TodosCompanion(')
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
+          ..write('parentId: $parentId, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('notes: $notes, ')
@@ -961,6 +1011,19 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 6,
+      maxTextLength: 9,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _intervalMeta = const VerificationMeta(
     'interval',
   );
@@ -975,6 +1038,28 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     ),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _customDaysMeta = const VerificationMeta(
+    'customDays',
+  );
+  @override
+  late final GeneratedColumn<String> customDays = GeneratedColumn<String>(
+    'custom_days',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _intervalDaysMeta = const VerificationMeta(
+    'intervalDays',
+  );
+  @override
+  late final GeneratedColumn<int> intervalDays = GeneratedColumn<int>(
+    'interval_days',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _goalTypeMeta = const VerificationMeta(
     'goalType',
@@ -1045,7 +1130,10 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     id,
     name,
     description,
+    color,
     interval,
+    customDays,
+    intervalDays,
     goalType,
     goalValue,
     goalUnit,
@@ -1084,6 +1172,14 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         ),
       );
     }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_colorMeta);
+    }
     if (data.containsKey('interval')) {
       context.handle(
         _intervalMeta,
@@ -1091,6 +1187,21 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
       );
     } else if (isInserting) {
       context.missing(_intervalMeta);
+    }
+    if (data.containsKey('custom_days')) {
+      context.handle(
+        _customDaysMeta,
+        customDays.isAcceptableOrUnknown(data['custom_days']!, _customDaysMeta),
+      );
+    }
+    if (data.containsKey('interval_days')) {
+      context.handle(
+        _intervalDaysMeta,
+        intervalDays.isAcceptableOrUnknown(
+          data['interval_days']!,
+          _intervalDaysMeta,
+        ),
+      );
     }
     if (data.containsKey('goal_type')) {
       context.handle(
@@ -1145,10 +1256,22 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      )!,
       interval: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}interval'],
       )!,
+      customDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_days'],
+      ),
+      intervalDays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}interval_days'],
+      ),
       goalType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}goal_type'],
@@ -1182,7 +1305,10 @@ class Habit extends DataClass implements Insertable<Habit> {
   final int id;
   final String name;
   final String? description;
+  final String color;
   final String interval;
+  final String? customDays;
+  final int? intervalDays;
   final String goalType;
   final double? goalValue;
   final String? goalUnit;
@@ -1192,7 +1318,10 @@ class Habit extends DataClass implements Insertable<Habit> {
     required this.id,
     required this.name,
     this.description,
+    required this.color,
     required this.interval,
+    this.customDays,
+    this.intervalDays,
     required this.goalType,
     this.goalValue,
     this.goalUnit,
@@ -1207,7 +1336,14 @@ class Habit extends DataClass implements Insertable<Habit> {
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
+    map['color'] = Variable<String>(color);
     map['interval'] = Variable<String>(interval);
+    if (!nullToAbsent || customDays != null) {
+      map['custom_days'] = Variable<String>(customDays);
+    }
+    if (!nullToAbsent || intervalDays != null) {
+      map['interval_days'] = Variable<int>(intervalDays);
+    }
     map['goal_type'] = Variable<String>(goalType);
     if (!nullToAbsent || goalValue != null) {
       map['goal_value'] = Variable<double>(goalValue);
@@ -1227,7 +1363,14 @@ class Habit extends DataClass implements Insertable<Habit> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      color: Value(color),
       interval: Value(interval),
+      customDays: customDays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customDays),
+      intervalDays: intervalDays == null && nullToAbsent
+          ? const Value.absent()
+          : Value(intervalDays),
       goalType: Value(goalType),
       goalValue: goalValue == null && nullToAbsent
           ? const Value.absent()
@@ -1249,7 +1392,10 @@ class Habit extends DataClass implements Insertable<Habit> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String?>(json['description']),
+      color: serializer.fromJson<String>(json['color']),
       interval: serializer.fromJson<String>(json['interval']),
+      customDays: serializer.fromJson<String?>(json['customDays']),
+      intervalDays: serializer.fromJson<int?>(json['intervalDays']),
       goalType: serializer.fromJson<String>(json['goalType']),
       goalValue: serializer.fromJson<double?>(json['goalValue']),
       goalUnit: serializer.fromJson<String?>(json['goalUnit']),
@@ -1264,7 +1410,10 @@ class Habit extends DataClass implements Insertable<Habit> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String?>(description),
+      'color': serializer.toJson<String>(color),
       'interval': serializer.toJson<String>(interval),
+      'customDays': serializer.toJson<String?>(customDays),
+      'intervalDays': serializer.toJson<int?>(intervalDays),
       'goalType': serializer.toJson<String>(goalType),
       'goalValue': serializer.toJson<double?>(goalValue),
       'goalUnit': serializer.toJson<String?>(goalUnit),
@@ -1277,7 +1426,10 @@ class Habit extends DataClass implements Insertable<Habit> {
     int? id,
     String? name,
     Value<String?> description = const Value.absent(),
+    String? color,
     String? interval,
+    Value<String?> customDays = const Value.absent(),
+    Value<int?> intervalDays = const Value.absent(),
     String? goalType,
     Value<double?> goalValue = const Value.absent(),
     Value<String?> goalUnit = const Value.absent(),
@@ -1287,7 +1439,10 @@ class Habit extends DataClass implements Insertable<Habit> {
     id: id ?? this.id,
     name: name ?? this.name,
     description: description.present ? description.value : this.description,
+    color: color ?? this.color,
     interval: interval ?? this.interval,
+    customDays: customDays.present ? customDays.value : this.customDays,
+    intervalDays: intervalDays.present ? intervalDays.value : this.intervalDays,
     goalType: goalType ?? this.goalType,
     goalValue: goalValue.present ? goalValue.value : this.goalValue,
     goalUnit: goalUnit.present ? goalUnit.value : this.goalUnit,
@@ -1301,7 +1456,14 @@ class Habit extends DataClass implements Insertable<Habit> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      color: data.color.present ? data.color.value : this.color,
       interval: data.interval.present ? data.interval.value : this.interval,
+      customDays: data.customDays.present
+          ? data.customDays.value
+          : this.customDays,
+      intervalDays: data.intervalDays.present
+          ? data.intervalDays.value
+          : this.intervalDays,
       goalType: data.goalType.present ? data.goalType.value : this.goalType,
       goalValue: data.goalValue.present ? data.goalValue.value : this.goalValue,
       goalUnit: data.goalUnit.present ? data.goalUnit.value : this.goalUnit,
@@ -1316,7 +1478,10 @@ class Habit extends DataClass implements Insertable<Habit> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('color: $color, ')
           ..write('interval: $interval, ')
+          ..write('customDays: $customDays, ')
+          ..write('intervalDays: $intervalDays, ')
           ..write('goalType: $goalType, ')
           ..write('goalValue: $goalValue, ')
           ..write('goalUnit: $goalUnit, ')
@@ -1331,7 +1496,10 @@ class Habit extends DataClass implements Insertable<Habit> {
     id,
     name,
     description,
+    color,
     interval,
+    customDays,
+    intervalDays,
     goalType,
     goalValue,
     goalUnit,
@@ -1345,7 +1513,10 @@ class Habit extends DataClass implements Insertable<Habit> {
           other.id == this.id &&
           other.name == this.name &&
           other.description == this.description &&
+          other.color == this.color &&
           other.interval == this.interval &&
+          other.customDays == this.customDays &&
+          other.intervalDays == this.intervalDays &&
           other.goalType == this.goalType &&
           other.goalValue == this.goalValue &&
           other.goalUnit == this.goalUnit &&
@@ -1357,7 +1528,10 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   final Value<int> id;
   final Value<String> name;
   final Value<String?> description;
+  final Value<String> color;
   final Value<String> interval;
+  final Value<String?> customDays;
+  final Value<int?> intervalDays;
   final Value<String> goalType;
   final Value<double?> goalValue;
   final Value<String?> goalUnit;
@@ -1367,7 +1541,10 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.description = const Value.absent(),
+    this.color = const Value.absent(),
     this.interval = const Value.absent(),
+    this.customDays = const Value.absent(),
+    this.intervalDays = const Value.absent(),
     this.goalType = const Value.absent(),
     this.goalValue = const Value.absent(),
     this.goalUnit = const Value.absent(),
@@ -1378,20 +1555,27 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.id = const Value.absent(),
     required String name,
     this.description = const Value.absent(),
+    required String color,
     required String interval,
+    this.customDays = const Value.absent(),
+    this.intervalDays = const Value.absent(),
     required String goalType,
     this.goalValue = const Value.absent(),
     this.goalUnit = const Value.absent(),
     this.startDate = const Value.absent(),
     this.archived = const Value.absent(),
   }) : name = Value(name),
+       color = Value(color),
        interval = Value(interval),
        goalType = Value(goalType);
   static Insertable<Habit> custom({
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? description,
+    Expression<String>? color,
     Expression<String>? interval,
+    Expression<String>? customDays,
+    Expression<int>? intervalDays,
     Expression<String>? goalType,
     Expression<double>? goalValue,
     Expression<String>? goalUnit,
@@ -1402,7 +1586,10 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (description != null) 'description': description,
+      if (color != null) 'color': color,
       if (interval != null) 'interval': interval,
+      if (customDays != null) 'custom_days': customDays,
+      if (intervalDays != null) 'interval_days': intervalDays,
       if (goalType != null) 'goal_type': goalType,
       if (goalValue != null) 'goal_value': goalValue,
       if (goalUnit != null) 'goal_unit': goalUnit,
@@ -1415,7 +1602,10 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Value<int>? id,
     Value<String>? name,
     Value<String?>? description,
+    Value<String>? color,
     Value<String>? interval,
+    Value<String?>? customDays,
+    Value<int?>? intervalDays,
     Value<String>? goalType,
     Value<double?>? goalValue,
     Value<String?>? goalUnit,
@@ -1426,7 +1616,10 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
+      color: color ?? this.color,
       interval: interval ?? this.interval,
+      customDays: customDays ?? this.customDays,
+      intervalDays: intervalDays ?? this.intervalDays,
       goalType: goalType ?? this.goalType,
       goalValue: goalValue ?? this.goalValue,
       goalUnit: goalUnit ?? this.goalUnit,
@@ -1447,8 +1640,17 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
     if (interval.present) {
       map['interval'] = Variable<String>(interval.value);
+    }
+    if (customDays.present) {
+      map['custom_days'] = Variable<String>(customDays.value);
+    }
+    if (intervalDays.present) {
+      map['interval_days'] = Variable<int>(intervalDays.value);
     }
     if (goalType.present) {
       map['goal_type'] = Variable<String>(goalType.value);
@@ -1474,7 +1676,10 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('color: $color, ')
           ..write('interval: $interval, ')
+          ..write('customDays: $customDays, ')
+          ..write('intervalDays: $intervalDays, ')
           ..write('goalType: $goalType, ')
           ..write('goalValue: $goalValue, ')
           ..write('goalUnit: $goalUnit, ')
@@ -2462,6 +2667,7 @@ typedef $$TodosTableCreateCompanionBuilder =
     TodosCompanion Function({
       Value<int> id,
       required int projectId,
+      Value<int?> parentId,
       required String title,
       Value<String?> description,
       Value<String?> notes,
@@ -2475,6 +2681,7 @@ typedef $$TodosTableUpdateCompanionBuilder =
     TodosCompanion Function({
       Value<int> id,
       Value<int> projectId,
+      Value<int?> parentId,
       Value<String> title,
       Value<String?> description,
       Value<String?> notes,
@@ -2535,6 +2742,11 @@ class $$TodosTableFilterComposer extends Composer<_$AppDatabase, $TodosTable> {
   });
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get parentId => $composableBuilder(
+    column: $table.parentId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2642,6 +2854,11 @@ class $$TodosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get parentId => $composableBuilder(
+    column: $table.parentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get title => $composableBuilder(
     column: $table.title,
     builder: (column) => ColumnOrderings(column),
@@ -2717,6 +2934,9 @@ class $$TodosTableAnnotationComposer
   });
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get parentId =>
+      $composableBuilder(column: $table.parentId, builder: (column) => column);
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
@@ -2823,6 +3043,7 @@ class $$TodosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> projectId = const Value.absent(),
+                Value<int?> parentId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
@@ -2834,6 +3055,7 @@ class $$TodosTableTableManager
               }) => TodosCompanion(
                 id: id,
                 projectId: projectId,
+                parentId: parentId,
                 title: title,
                 description: description,
                 notes: notes,
@@ -2847,6 +3069,7 @@ class $$TodosTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int projectId,
+                Value<int?> parentId = const Value.absent(),
                 required String title,
                 Value<String?> description = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
@@ -2858,6 +3081,7 @@ class $$TodosTableTableManager
               }) => TodosCompanion.insert(
                 id: id,
                 projectId: projectId,
+                parentId: parentId,
                 title: title,
                 description: description,
                 notes: notes,
@@ -2949,7 +3173,10 @@ typedef $$HabitsTableCreateCompanionBuilder =
       Value<int> id,
       required String name,
       Value<String?> description,
+      required String color,
       required String interval,
+      Value<String?> customDays,
+      Value<int?> intervalDays,
       required String goalType,
       Value<double?> goalValue,
       Value<String?> goalUnit,
@@ -2961,7 +3188,10 @@ typedef $$HabitsTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> name,
       Value<String?> description,
+      Value<String> color,
       Value<String> interval,
+      Value<String?> customDays,
+      Value<int?> intervalDays,
       Value<String> goalType,
       Value<double?> goalValue,
       Value<String?> goalUnit,
@@ -3034,8 +3264,23 @@ class $$HabitsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get interval => $composableBuilder(
     column: $table.interval,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customDays => $composableBuilder(
+    column: $table.customDays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get intervalDays => $composableBuilder(
+    column: $table.intervalDays,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3139,8 +3384,23 @@ class $$HabitsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get interval => $composableBuilder(
     column: $table.interval,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customDays => $composableBuilder(
+    column: $table.customDays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get intervalDays => $composableBuilder(
+    column: $table.intervalDays,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -3190,8 +3450,21 @@ class $$HabitsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
   GeneratedColumn<String> get interval =>
       $composableBuilder(column: $table.interval, builder: (column) => column);
+
+  GeneratedColumn<String> get customDays => $composableBuilder(
+    column: $table.customDays,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get intervalDays => $composableBuilder(
+    column: $table.intervalDays,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get goalType =>
       $composableBuilder(column: $table.goalType, builder: (column) => column);
@@ -3290,7 +3563,10 @@ class $$HabitsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String> color = const Value.absent(),
                 Value<String> interval = const Value.absent(),
+                Value<String?> customDays = const Value.absent(),
+                Value<int?> intervalDays = const Value.absent(),
                 Value<String> goalType = const Value.absent(),
                 Value<double?> goalValue = const Value.absent(),
                 Value<String?> goalUnit = const Value.absent(),
@@ -3300,7 +3576,10 @@ class $$HabitsTableTableManager
                 id: id,
                 name: name,
                 description: description,
+                color: color,
                 interval: interval,
+                customDays: customDays,
+                intervalDays: intervalDays,
                 goalType: goalType,
                 goalValue: goalValue,
                 goalUnit: goalUnit,
@@ -3312,7 +3591,10 @@ class $$HabitsTableTableManager
                 Value<int> id = const Value.absent(),
                 required String name,
                 Value<String?> description = const Value.absent(),
+                required String color,
                 required String interval,
+                Value<String?> customDays = const Value.absent(),
+                Value<int?> intervalDays = const Value.absent(),
                 required String goalType,
                 Value<double?> goalValue = const Value.absent(),
                 Value<String?> goalUnit = const Value.absent(),
@@ -3322,7 +3604,10 @@ class $$HabitsTableTableManager
                 id: id,
                 name: name,
                 description: description,
+                color: color,
                 interval: interval,
+                customDays: customDays,
+                intervalDays: intervalDays,
                 goalType: goalType,
                 goalValue: goalValue,
                 goalUnit: goalUnit,

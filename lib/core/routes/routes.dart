@@ -6,16 +6,16 @@ import '../scaffold_with_navbar.dart';
 
 int numberOfDestinations = 2;
 
-
 final appRouter = GoRouter(
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
-        return ScaffoldWithNavBar(navigationShell: navigationShell, numberOfDestinations: numberOfDestinations);
+        return SafeArea(
+          child: ScaffoldWithNavBar(navigationShell: navigationShell, numberOfDestinations: numberOfDestinations),
+        );
       },
       branches: [
         StatefulShellBranch(
-          navigatorKey: GlobalKey<NavigatorState>(),
           routes: [
             GoRoute(
               path: '/',
@@ -24,7 +24,6 @@ final appRouter = GoRouter(
           ],
         ),
         StatefulShellBranch(
-          navigatorKey: GlobalKey<NavigatorState>(),
           routes: [
             GoRoute(
               path: '/habits',
