@@ -204,19 +204,14 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
-  // HABIT-SPECIFIC QUERIES
-
-  // Get active (non-archived) habits
   Future<List<Habit>> getActiveHabits() {
     return (select(habits)..where((tbl) => tbl.archived.equals(false))).get();
   }
 
-  // Watch active habits (stream)
   Stream<List<Habit>> watchActiveHabits() {
     return (select(habits)..where((tbl) => tbl.archived.equals(false))).watch();
   }
 
-  // Get a single habit by ID
   Future<Habit?> getHabitById(int id) {
     return (select(habits)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
