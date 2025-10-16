@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../database/database_provider.dart';
 import '../../database/crud.dart';
 import '../../core/theme/colors.dart';
 import 'package:intl/intl.dart';

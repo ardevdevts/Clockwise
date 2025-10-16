@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../database/database_provider.dart';
 import '../../database/crud.dart';
 import '../../core/theme/colors.dart';
 import 'package:drift/drift.dart' as drift;

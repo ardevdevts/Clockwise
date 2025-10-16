@@ -1,7 +1,6 @@
 import 'package:financialtracker/database/crud.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../database/database_provider.dart';
 import '../../core/theme/colors.dart';
 import 'package:intl/intl.dart';
 import '../../core/services/service_providers.dart';

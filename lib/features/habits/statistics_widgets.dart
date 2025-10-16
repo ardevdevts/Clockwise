@@ -1,6 +1,5 @@
 import 'package:financialtracker/database/crud.dart';
 import 'package:flutter/material.dart';
-import '../../database/database_provider.dart';
 import '../../core/theme/colors.dart';
 
 // Period Selector Widget

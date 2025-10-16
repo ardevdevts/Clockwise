@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
+import 'package:markdown/markdown.dart' as md;
 import '../../database/database_provider.dart';
 import '../../database/crud.dart';
 import '../../core/theme/colors.dart';
@@ -115,6 +119,11 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
             onPressed: () => setState(() => _isFavorite = !_isFavorite),
           ),
           IconButton(
+            icon: const Icon(Icons.content_paste, color: AppColors.textSecondary),
+            onPressed: _pasteMarkdown,
+            tooltip: 'Paste Markdown',
+          ),
+          IconButton(
             icon: const Icon(Icons.label_outline, color: AppColors.textSecondary),
             onPressed: _showTagsDialog,
           ),
@@ -181,7 +190,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Color(int.parse('FF${tag.color}', radix: 16)).withOpacity(0.2),
+                      color: Color(int.parse('FF${tag.color}', radix: 16)).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
                         color: Color(int.parse('FF${tag.color}', radix: 16)),
@@ -279,6 +288,79 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _pasteMarkdown() async {
+    try {
+      // Get clipboard content
+      final clipboardData = await Clipboard.getData('text/plain');
+      if (clipboardData?.text == null || clipboardData!.text!.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Clipboard is empty'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      final markdown = clipboardData.text!;
+      
+      // Convert markdown to HTML first
+      final html = md.markdownToHtml(markdown);
+      
+      // Convert HTML to Delta using flutter_quill_delta_from_html
+      final delta = HtmlToDelta().convert(html);
+      
+      // Get current selection
+      final selection = _controller.selection;
+      final index = selection.baseOffset;
+      
+      // Insert the converted delta at cursor position
+      if (index >= 0 && index < _controller.document.length) {
+        // Create a new delta that retains content up to cursor, then inserts new content
+        final insertDelta = Delta()
+          ..retain(index)
+          ..concat(delta);
+        
+        _controller.document.compose(
+          insertDelta,
+          ChangeSource.local,
+        );
+        
+        // Move cursor to end of inserted content
+        final newPosition = index + delta.length;
+        _controller.updateSelection(
+          TextSelection.collapsed(offset: newPosition),
+          ChangeSource.local,
+        );
+      } else {
+        // If no valid selection, replace entire document
+        _controller.document = Document.fromDelta(delta);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Markdown pasted and converted successfully'),
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error pasting markdown: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   void _showTagsDialog() async {

@@ -17,11 +17,18 @@ class NotesPage extends ConsumerStatefulWidget {
 class _NotesPageState extends ConsumerState<NotesPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _isSidebarOpen = false;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _toggleSidebar() {
+    setState(() {
+      _isSidebarOpen = !_isSidebarOpen;
+    });
   }
 
   @override
@@ -33,14 +40,29 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Row(
+        child: Stack(
           children: [
-            // Sidebar
-            _buildSidebar(database),
-            
             // Main content
-            Expanded(
-              child: _buildMainContent(database, selectedFolder, selectedTag),
+            _buildMainContent(database, selectedFolder, selectedTag),
+            
+            // Sidebar overlay
+            if (_isSidebarOpen)
+              GestureDetector(
+                onTap: _toggleSidebar,
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.5),
+                ),
+              ),
+            
+            // Sidebar
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              left: _isSidebarOpen ? 0 : -250,
+              top: 0,
+              bottom: 0,
+              width: 250,
+              child: _buildSidebar(database),
             ),
           ],
         ),
@@ -65,16 +87,32 @@ class _NotesPageState extends ConsumerState<NotesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
+          // Header with close button
+          Container(
             padding: const EdgeInsets.all(20),
-            child: const Text(
-              'Notes',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: AppColors.border, width: 0.5),
               ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Notes',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  onPressed: _toggleSidebar,
+                  icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
           ),
 
@@ -157,7 +195,10 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        onTap();
+        _toggleSidebar(); // Close sidebar after selection
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
@@ -185,6 +226,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
       onTap: () {
         ref.read(selectedFolderProvider.notifier).state = folder.id;
         ref.read(selectedTagProvider.notifier).state = null;
+        _toggleSidebar(); // Close sidebar after selection
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -217,33 +259,49 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   Widget _buildMainContent(AppDatabase database, int? selectedFolder, int? selectedTag) {
     return Column(
       children: [
-        // Search bar
+        // Header with menu button and search bar
         Padding(
           padding: const EdgeInsets.all(20),
-          child: TextField(
-            controller: _searchController,
-            onChanged: (value) => setState(() => _searchQuery = value),
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'Search notes...',
-              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-              prefixIcon: const Icon(Icons.search, color: AppColors.textMuted, size: 20),
-              filled: true,
-              fillColor: AppColors.surface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppColors.border, width: 0.5),
+          child: Row(
+            children: [
+              // Menu button to toggle sidebar
+              IconButton(
+                onPressed: _toggleSidebar,
+                icon: const Icon(Icons.menu, color: AppColors.textPrimary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppColors.border, width: 0.5),
+              const SizedBox(width: 12),
+              
+              // Search bar
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Search notes...',
+                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.border, width: 0.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.border, width: 0.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.accentBlue, width: 1),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: AppColors.accentBlue, width: 1),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
+            ],
           ),
         ),
 
@@ -443,7 +501,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Color(int.parse('FF${tag.color}', radix: 16)).withOpacity(0.2),
+                          color: Color(int.parse('FF${tag.color}', radix: 16)).withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

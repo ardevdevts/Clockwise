@@ -21,7 +21,7 @@ class CustomNavbar extends StatelessWidget {
     final double itemWidth = MediaQuery.of(context).size.width / numberOfDestinations;
 
     return Container(
-      height: 60,
+      height: 70,
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
@@ -48,16 +48,23 @@ class CustomNavbar extends StatelessWidget {
                   ),
                 ),
                 AnimatedPositioned(
-                  duration: const Duration(milliseconds: 250),
+                  duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOutCubic,
-                  left: (currentIndex * itemWidth) + (itemWidth / 2) - 18,
-                  bottom: 8,
+                  left: (currentIndex * itemWidth) + (itemWidth / 2) - 20,
+                  bottom: 4,
                   child: Container(
-                    width: 36,
+                    width: 40,
                     height: 3,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(1.5),
-                      color: Colors.white.withOpacity(0.9),
+                      color: const Color(0xFF2196F3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2196F3).withOpacity(0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -84,19 +91,51 @@ class CustomNavbar extends StatelessWidget {
       Icons.monitor_heart,
       Icons.note,
     ];
+    final labels = [
+      'Tasks',
+      'Habits',
+      'Notes',
+    ];
 
     return GestureDetector(
-      onTap: () => onDestinationSelected(index),
+      onTap: () {
+        onDestinationSelected(index);
+      },
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
+      child: Container(
         width: itemWidth,
-        height: 60,
-        child: Center(
-          child: Icon(
-            isSelected ? selectedIcons[index] : icons[index],
-            size: 24,
-            color: isSelected ? Colors.white : Colors.grey.shade600,
-          ),
+        height: 70,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              transform: Matrix4.identity()
+                ..scale(isSelected ? 1.1 : 1.0),
+              child: Icon(
+                isSelected ? selectedIcons[index] : icons[index],
+                size: 26,
+                color: isSelected 
+                    ? const Color(0xFF2196F3) 
+                    : Colors.grey.shade600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? const Color(0xFF2196F3)
+                    : Colors.grey.shade600.withOpacity(0.7),
+                letterSpacing: 0.3,
+              ),
+              child: Text(labels[index]),
+            ),
+          ],
         ),
       ),
     );
