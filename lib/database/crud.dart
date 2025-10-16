@@ -5,7 +5,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 part 'crud.g.dart'; // will be generated
 
 @DriftDatabase(
-  tables: [Projects, Todos, Habits, HabitLogs, Reminders, TodoLinks, TodoImages],
+  tables: [Projects, Todos, Habits, HabitLogs, Reminders, TodoLinks, TodoImages, NoteFolders, Notes, Tags, NoteTags],
 )
 class AppDatabase extends _$AppDatabase {
 
@@ -13,7 +13,7 @@ class AppDatabase extends _$AppDatabase {
 
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   // Migration strategy
   @override
@@ -43,6 +43,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         // Create TodoImages table
         await migrator.createTable(todoImages);
+      }
+      if (from < 7) {
+        // Create Notes-related tables
+        await migrator.createTable(noteFolders);
+        await migrator.createTable(notes);
+        await migrator.createTable(tags);
+        await migrator.createTable(noteTags);
       }
     },
     beforeOpen: (details) async {
@@ -440,6 +447,123 @@ class AppDatabase extends _$AppDatabase {
     final firstDayOfYear = DateTime(date.year, 1, 1);
     final daysSinceFirstDay = date.difference(firstDayOfYear).inDays;
     return (daysSinceFirstDay / 7).floor() + 1;
+  }
+
+  // ============= NOTES CRUD =============
+
+  // Folders
+  Future<List<NoteFolder>> get allNoteFolders => select(noteFolders).get();
+  
+  Stream<List<NoteFolder>> watchNoteFolders() => select(noteFolders).watch();
+
+  Future<NoteFolder?> getNoteFolderById(int id) =>
+      (select(noteFolders)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+
+  Future<int> insertNoteFolder(NoteFoldersCompanion folder) => into(noteFolders).insert(folder);
+
+  Future<bool> updateNoteFolder(NoteFolder folder) => update(noteFolders).replace(folder);
+
+  Future<int> deleteNoteFolder(int id) => (delete(noteFolders)..where((tbl) => tbl.id.equals(id))).go();
+
+  // Notes
+  Future<List<Note>> get allNotes => select(notes).get();
+  
+  Stream<List<Note>> watchNotes() => select(notes).watch();
+
+  Stream<List<Note>> watchNotesByFolder(int? folderId) {
+    if (folderId == null) {
+      return (select(notes)..where((tbl) => tbl.folderId.isNull())).watch();
+    }
+    return (select(notes)..where((tbl) => tbl.folderId.equals(folderId))).watch();
+  }
+
+  Future<Note?> getNoteById(int id) =>
+      (select(notes)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+
+  Future<List<Note>> getNotesByFolder(int? folderId) {
+    if (folderId == null) {
+      return (select(notes)..where((tbl) => tbl.folderId.isNull())).get();
+    }
+    return (select(notes)..where((tbl) => tbl.folderId.equals(folderId))).get();
+  }
+
+  Future<List<Note>> getPinnedNotes() =>
+      (select(notes)..where((tbl) => tbl.isPinned.equals(true))).get();
+
+  Future<List<Note>> getFavoriteNotes() =>
+      (select(notes)..where((tbl) => tbl.isFavorite.equals(true))).get();
+
+  Future<int> insertNote(NotesCompanion note) => into(notes).insert(note);
+
+  Future<bool> updateNote(Note note) => update(notes).replace(note);
+
+  Future<int> deleteNote(int id) => (delete(notes)..where((tbl) => tbl.id.equals(id))).go();
+
+  Future<List<Note>> searchNotes(String query) {
+    final lowerQuery = query.toLowerCase();
+    return (select(notes)
+          ..where((tbl) => 
+              tbl.title.lower().like('%$lowerQuery%') | 
+              tbl.content.lower().like('%$lowerQuery%')))
+        .get();
+  }
+
+  // Tags
+  Future<List<Tag>> get allTags => select(tags).get();
+  
+  Stream<List<Tag>> watchTags() => select(tags).watch();
+
+  Future<Tag?> getTagById(int id) =>
+      (select(tags)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+
+  Future<Tag?> getTagByName(String name) =>
+      (select(tags)..where((tbl) => tbl.name.equals(name))).getSingleOrNull();
+
+  Future<int> insertTag(TagsCompanion tag) => into(tags).insert(tag);
+
+  Future<bool> updateTag(Tag tag) => update(tags).replace(tag);
+
+  Future<int> deleteTag(int id) => (delete(tags)..where((tbl) => tbl.id.equals(id))).go();
+
+  // Note-Tag relationships
+  Future<List<Tag>> getTagsForNote(int noteId) async {
+    final query = select(noteTags).join([
+      innerJoin(tags, tags.id.equalsExp(noteTags.tagId))
+    ])..where(noteTags.noteId.equals(noteId));
+    
+    final results = await query.get();
+    return results.map((row) => row.readTable(tags)).toList();
+  }
+
+  Future<List<Note>> getNotesByTag(int tagId) async {
+    final query = select(noteTags).join([
+      innerJoin(notes, notes.id.equalsExp(noteTags.noteId))
+    ])..where(noteTags.tagId.equals(tagId));
+    
+    final results = await query.get();
+    return results.map((row) => row.readTable(notes)).toList();
+  }
+
+  Future<int> addTagToNote(int noteId, int tagId) =>
+      into(noteTags).insert(NoteTagsCompanion.insert(
+        noteId: noteId,
+        tagId: tagId,
+      ));
+
+  Future<int> removeTagFromNote(int noteId, int tagId) =>
+      (delete(noteTags)
+            ..where((tbl) => 
+                tbl.noteId.equals(noteId) & tbl.tagId.equals(tagId)))
+          .go();
+
+  Future<void> setNoteTags(int noteId, List<int> tagIds) async {
+    // Remove all existing tags
+    await (delete(noteTags)..where((tbl) => tbl.noteId.equals(noteId))).go();
+    
+    // Add new tags
+    for (final tagId in tagIds) {
+      await addTagToNote(noteId, tagId);
+    }
   }
   
 }

@@ -88,3 +88,41 @@ class TodoImages extends Table {
 
 enum Priority { low, medium, high, urgent }
 enum GoalType { unit, boolean }
+
+@DataClassName('NoteFolder')
+class NoteFolders extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(min: 1, max: 100)();
+  TextColumn get color => text().withLength(min: 6, max: 9).withDefault(const Constant('00ADEF'))();
+  IntColumn get parentId => integer().nullable().customConstraint("NULL REFERENCES note_folders(id)")();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+}
+
+@DataClassName('Note')
+class Notes extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get folderId => integer().nullable().references(NoteFolders, #id, onDelete: KeyAction.setNull)();
+  TextColumn get title => text().withLength(min: 1, max: 200)();
+  TextColumn get content => text()(); // JSON content from flutter_quill
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+}
+
+@DataClassName('Tag')
+class Tags extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(min: 1, max: 50)();
+  TextColumn get color => text().withLength(min: 6, max: 9).withDefault(const Constant('00ADEF'))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DataClassName('NoteTag')
+class NoteTags extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get noteId => integer().references(Notes, #id, onDelete: KeyAction.cascade)();
+  IntColumn get tagId => integer().references(Tags, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}

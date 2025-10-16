@@ -77,10 +77,12 @@ class CustomNavbar extends StatelessWidget {
     final icons = [
       Icons.task_outlined,
       Icons.monitor_heart_outlined,
+      Icons.note_outlined,
     ];
     final selectedIcons = [
       Icons.task,
       Icons.monitor_heart,
+      Icons.note,
     ];
 
     return GestureDetector(
