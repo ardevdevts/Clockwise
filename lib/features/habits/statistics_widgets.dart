@@ -1,5 +1,8 @@
 import 'package:financialtracker/database/crud.dart';
+import 'package:financialtracker/features/habits/habit_providers.dart';
+import 'package:financialtracker/features/habits/habit_with_details.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/colors.dart';
 
 // Period Selector Widget
@@ -50,107 +53,102 @@ class PeriodSelector extends StatelessWidget {
 }
 
 // Statistics Cards Widget
-class StatisticsCards extends StatelessWidget {
-  final Habit habit;
-  final AppDatabase database;
+class StatisticsCards extends ConsumerWidget {
+  final HabitWithDetails habitWithDetails;
   final Color habitColor;
   final int days;
 
   const StatisticsCards({
     super.key,
-    required this.habit,
-    required this.database,
+    required this.habitWithDetails,
     required this.habitColor,
     required this.days,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: database.getHabitStats(habit.id, days: days),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
-            ),
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final habit = habitWithDetails.habit;
+    final statsAsync = ref.watch(habitStatsProvider((habit.id, days)));
 
-        final stats = snapshot.data!;
-        return Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    title: 'Completion',
-                    value: '${stats['completionRate'].toStringAsFixed(0)}%',
-                    icon: Icons.trending_up,
-                    color: habitColor,
-                  ),
+    return statsAsync.when(
+      data: (stats) => Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  title: 'Completion',
+                  value: '${stats['completionRate'].toStringAsFixed(0)}%',
+                  icon: Icons.trending_up,
+                  color: habitColor,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    title: 'Total Logs',
-                    value: '${stats['totalLogs']}',
-                    icon: Icons.calendar_month,
-                    color: habitColor,
-                  ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StatCard(
+                  title: 'Total Logs',
+                  value: '${stats['totalLogs']}',
+                  icon: Icons.calendar_month,
+                  color: habitColor,
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  title: 'Current Streak',
+                  value: '${stats['currentStreak']} days',
+                  icon: Icons.local_fire_department,
+                  color: habitColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StatCard(
+                  title: 'Longest Streak',
+                  value: '${stats['longestStreak']} days',
+                  icon: Icons.emoji_events,
+                  color: habitColor,
+                ),
+              ),
+            ],
+          ),
+          if (habit.goalType == 'unit') ...[
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: StatCard(
-                    title: 'Current Streak',
-                    value: '${stats['currentStreak']} days',
-                    icon: Icons.local_fire_department,
+                    title: 'Average',
+                    value: '${stats['averageAmount'].toStringAsFixed(1)} ${habit.goalUnit}',
+                    icon: Icons.analytics,
                     color: habitColor,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: StatCard(
-                    title: 'Longest Streak',
-                    value: '${stats['longestStreak']} days',
-                    icon: Icons.emoji_events,
+                    title: 'Total',
+                    value: '${stats['totalAmount'].toStringAsFixed(0)} ${habit.goalUnit}',
+                    icon: Icons.functions,
                     color: habitColor,
                   ),
                 ),
               ],
             ),
-            if (habit.goalType == 'unit') ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: StatCard(
-                      title: 'Average',
-                      value: '${stats['averageAmount'].toStringAsFixed(1)} ${habit.goalUnit}',
-                      icon: Icons.analytics,
-                      color: habitColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: StatCard(
-                      title: 'Total',
-                      value: '${stats['totalAmount'].toStringAsFixed(0)} ${habit.goalUnit}',
-                      icon: Icons.functions,
-                      color: habitColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
-        );
-      },
+        ],
+      ),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24.0),
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+        ),
+      ),
+      error: (err, stack) => Center(child: Text('Error: $err')),
     );
   }
 }

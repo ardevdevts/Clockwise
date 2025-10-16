@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import '../database.dart'; // your tables
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:financialtracker/features/habits/habit_with_details.dart';
+import 'package:rxdart/rxdart.dart';
 
 part 'crud.g.dart'; // will be generated
 
@@ -269,6 +271,22 @@ class AppDatabase extends _$AppDatabase {
           ..where((tbl) => tbl.habitId.equals(habitId))
           ..orderBy([(t) => OrderingTerm.desc(t.date)]))
         .watch();
+  }
+
+  Stream<List<Reminder>> watchHabitReminders(int habitId) {
+    return (select(reminders)..where((tbl) => tbl.habitId.equals(habitId))).watch();
+  }
+
+  Stream<HabitWithDetails> watchHabitWithDetails(int habitId) {
+    final habitStream = (select(habits)..where((tbl) => tbl.id.equals(habitId))).watchSingle();
+    final logsStream = watchHabitLogs(habitId);
+
+    return Rx.combineLatest2(habitStream, logsStream, (habit, logs) {
+      if (habit == null) {
+        throw Exception('Habit not found');
+      }
+      return HabitWithDetails(habit: habit, logs: logs);
+    });
   }
 
   // Get last habit log for a habit
@@ -544,6 +562,8 @@ class AppDatabase extends _$AppDatabase {
     return results.map((row) => row.readTable(notes)).toList();
   }
 
+  
+
   Future<int> addTagToNote(int noteId, int tagId) =>
       into(noteTags).insert(NoteTagsCompanion.insert(
         noteId: noteId,
@@ -564,6 +584,35 @@ class AppDatabase extends _$AppDatabase {
     for (final tagId in tagIds) {
       await addTagToNote(noteId, tagId);
     }
+  }
+
+  Stream<List<HabitWithDetails>> watchActiveHabitsWithDetails() {
+    return watchActiveHabits().asyncMap((habits) async {
+      final habitsWithDetails = <HabitWithDetails>[];
+      for (final habit in habits) {
+        final today = DateTime.now();
+        final todayLog = await getHabitLogForDate(habit.id, today);
+        final lastLog = await getLastHabitLog(habit.id);
+
+        final endDate = DateTime(today.year, today.month, today.day);
+        // The grid in habits_page.dart shows 180 days.
+        final startDate = endDate.subtract(const Duration(days: 180));
+        final recentLogsList = await getHabitLogsInRange(habit.id, startDate, endDate);
+
+        final recentLogs = <String, HabitLog>{};
+        for (final log in recentLogsList) {
+          final key =
+              '${log.date.year}-${log.date.month.toString().padLeft(2, '0')}-${log.date.day.toString().padLeft(2, '0')}';
+          recentLogs[key] = log;
+        }
+
+        habitsWithDetails.add(HabitWithDetails(
+          habit: habit,
+          logs: recentLogs.values.toList(),
+        ));
+      }
+      return habitsWithDetails;
+    });
   }
   
 }

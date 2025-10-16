@@ -1,39 +1,32 @@
 import 'package:financialtracker/database/crud.dart';
+import 'package:financialtracker/features/habits/habit_providers.dart';
+import 'package:financialtracker/features/habits/habit_with_details.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/colors.dart';
 import 'package:intl/intl.dart';
 
 // Progress Chart Widget
-class ProgressChart extends StatelessWidget {
-  final Habit habit;
-  final AppDatabase database;
+class ProgressChart extends ConsumerWidget {
+  final HabitWithDetails habitWithDetails;
   final Color habitColor;
   final int days;
 
   const ProgressChart({
     super.key,
-    required this.habit,
-    required this.database,
+    required this.habitWithDetails,
     required this.habitColor,
     required this.days,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<DateTime, double>>(
-      future: database.getDailyHabitLogs(habit.id, days: days),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox(
-            height: 200,
-            child: Center(
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
-            ),
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final habit = habitWithDetails.habit;
+    final dailyLogsAsync = ref.watch(dailyHabitLogsProvider((habit.id, days)));
 
-        final dailyLogs = snapshot.data!;
+    return dailyLogsAsync.when(
+      data: (dailyLogs) {
         if (dailyLogs.isEmpty) {
           return Container(
             height: 200,
@@ -175,38 +168,35 @@ class ProgressChart extends StatelessWidget {
           ),
         );
       },
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+        ),
+      ),
+      error: (err, stack) => Center(child: Text('Error: $err')),
     );
   }
 }
 
 // Weekly Trend Chart Widget
-class WeeklyTrendChart extends StatelessWidget {
-  final Habit habit;
-  final AppDatabase database;
+class WeeklyTrendChart extends ConsumerWidget {
+  final HabitWithDetails habitWithDetails;
   final Color habitColor;
 
   const WeeklyTrendChart({
     super.key,
-    required this.habit,
-    required this.database,
+    required this.habitWithDetails,
     required this.habitColor,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: database.getWeeklyHabitStats(habit.id, weeks: 12),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox(
-            height: 200,
-            child: Center(
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
-            ),
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final habit = habitWithDetails.habit;
+    final weeklyStatsAsync = ref.watch(weeklyHabitStatsProvider(habit.id));
 
-        final weeklyStats = snapshot.data!;
+    return weeklyStatsAsync.when(
+      data: (weeklyStats) {
         if (weeklyStats.isEmpty) {
           return Container(
             height: 200,
@@ -328,6 +318,13 @@ class WeeklyTrendChart extends StatelessWidget {
           ),
         );
       },
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+        ),
+      ),
+      error: (err, stack) => Center(child: Text('Error: $err')),
     );
   }
 }

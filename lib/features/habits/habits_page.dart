@@ -8,21 +8,7 @@ import 'package:intl/intl.dart';
 import '../../database/database_provider.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-// Data class to hold a habit and all its required details for the UI.
-// This allows fetching all data in one go, preventing N+1 queries.
-class HabitWithDetails {
-  final Habit habit;
-  final HabitLog? todayLog;
-  final HabitLog? lastLog;
-  final Map<String, HabitLog> recentLogs; // For the contribution grid
-
-  HabitWithDetails({
-    required this.habit,
-    this.todayLog,
-    this.lastLog,
-    required this.recentLogs,
-  });
-}
+import 'habit_with_details.dart';
 
 class HabitsPage extends ConsumerWidget {
   const HabitsPage({super.key});
@@ -38,7 +24,8 @@ class HabitsPage extends ConsumerWidget {
         child: StreamBuilder<List<HabitWithDetails>>(
           stream: database.watchActiveHabitsWithDetails(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
               return const Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
@@ -60,7 +47,8 @@ class HabitsPage extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
                   sliver: SliverList.separated(
                     itemCount: habitsWithDetails.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final habitDetails = habitsWithDetails[index];
                       return _HabitCard(
@@ -102,7 +90,11 @@ class HabitsPage extends ConsumerWidget {
                   barrierColor: Colors.black87,
                   builder: (context) => HabitDialog(database: database),
                 ),
-                icon: const HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.textPrimary, size: 28),
+                icon: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedAdd01,
+                  color: AppColors.textPrimary,
+                  size: 28,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -167,7 +159,11 @@ class HabitsPage extends ConsumerWidget {
             barrierColor: Colors.black87,
             builder: (context) => HabitDialog(database: database),
           ),
-          icon: const HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.textPrimary, size: 28),
+          icon: const HugeIcon(
+            icon: HugeIcons.strokeRoundedAdd01,
+            color: AppColors.textPrimary,
+            size: 28,
+          ),
         ),
         const SizedBox(width: 24),
       ],
@@ -190,20 +186,28 @@ class _HabitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final habit = habitDetails.habit;
-    final log = habitDetails.todayLog;
-    final lastLog = habitDetails.lastLog;
+    final logs = habitDetails.logs;
     final habitColor = Color(int.parse('FF${habit.color}', radix: 16));
-    final isCompleted = log != null;
-    final currentProgress = log?.amount ?? 0.0;
+
+    // Convert logs list to a map for the contribution grid
+    final logMap = <String, HabitLog>{};
+    for (final log in logs) {
+      final key = _dateKey(log.date);
+      logMap[key] = log;
+    }
+
+    // Get today's log
+    final todayKey = _dateKey(selectedDate);
+    final todayLog = logMap[todayKey];
+
+    final isCompleted = todayLog != null;
+    final currentProgress = todayLog?.amount ?? 0.0;
 
     return Container(
       decoration: BoxDecoration(
         color: habitColor.withOpacity(0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: habitColor.withOpacity(0.25),
-          width: 1.5,
-        ),
+        border: Border.all(color: habitColor.withOpacity(0.25), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: habitColor.withOpacity(0.1),
@@ -222,15 +226,22 @@ class _HabitCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildCardHeader(context, habit, log, habitColor, isCompleted, currentProgress),
+                _buildCardHeader(
+                  context,
+                  habit,
+                  todayLog,
+                  habitColor,
+                  isCompleted,
+                  currentProgress,
+                ),
                 const SizedBox(height: 16),
                 _CompactContributionGrid(
                   habit: habit,
                   habitColor: habitColor,
-                  logMap: habitDetails.recentLogs,
+                  logMap: logMap,
                 ),
                 const SizedBox(height: 12),
-                _buildCardFooter(habit, lastLog),
+                _buildCardFooter(habit, todayLog),
               ],
             ),
           ),
@@ -239,7 +250,18 @@ class _HabitCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCardHeader(BuildContext context, Habit habit, HabitLog? log, Color habitColor, bool isCompleted, double currentProgress) {
+  String _dateKey(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildCardHeader(
+    BuildContext context,
+    Habit habit,
+    HabitLog? log,
+    Color habitColor,
+    bool isCompleted,
+    double currentProgress,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -265,7 +287,8 @@ class _HabitCard extends StatelessWidget {
                   letterSpacing: -0.2,
                 ),
               ),
-              if (habit.description != null && habit.description!.isNotEmpty) ...[
+              if (habit.description != null &&
+                  habit.description!.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   habit.description!,
@@ -282,9 +305,22 @@ class _HabitCard extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         if (habit.goalType == 'boolean')
-          _BooleanHabitControl(database: database, habit: habit, log: log, habitColor: habitColor, isCompleted: isCompleted)
+          _BooleanHabitControl(
+            database: database,
+            habit: habit,
+            log: log,
+            habitColor: habitColor,
+            isCompleted: isCompleted,
+          )
         else
-          _UnitHabitControl(database: database, habit: habit, log: log, habitColor: habitColor, isCompleted: isCompleted, currentProgress: currentProgress),
+          _UnitHabitControl(
+            database: database,
+            habit: habit,
+            log: log,
+            habitColor: habitColor,
+            isCompleted: isCompleted,
+            currentProgress: currentProgress,
+          ),
         _MoreMenu(database: database, habit: habit),
       ],
     );
@@ -296,7 +332,11 @@ class _HabitCard extends StatelessWidget {
         if (habit.goalType == 'unit' && habit.goalUnit != null)
           Row(
             children: [
-              const HugeIcon(icon: HugeIcons.strokeRoundedFlag01, size: 13, color: AppColors.textMuted),
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedFlag01,
+                size: 13,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(width: 4),
               Text(
                 'Goal: ${habit.goalValue?.toStringAsFixed(0)} ${habit.goalUnit}',
@@ -311,7 +351,11 @@ class _HabitCard extends StatelessWidget {
         if (lastLog != null)
           Row(
             children: [
-              const HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 13, color: AppColors.textMuted),
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedClock01,
+                size: 13,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(width: 4),
               Text(
                 'Last: ${DateFormat('MMM d').format(lastLog.date)}',
@@ -328,10 +372,7 @@ class _HabitCard extends StatelessWidget {
 }
 
 class _MoreMenu extends StatelessWidget {
-  const _MoreMenu({
-    required this.database,
-    required this.habit,
-  });
+  const _MoreMenu({required this.database, required this.habit});
 
   final AppDatabase database;
   final Habit habit;
@@ -339,7 +380,11 @@ class _MoreMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: Color(int.parse('FF${habit.color}', radix: 16)).withOpacity(0.7), size: 20),
+      icon: HugeIcon(
+        icon: HugeIcons.strokeRoundedMoreHorizontal,
+        color: Color(int.parse('FF${habit.color}', radix: 16)).withOpacity(0.7),
+        size: 20,
+      ),
       color: AppColors.elevatedSurface,
       elevation: 8,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -361,7 +406,11 @@ class _MoreMenu extends StatelessWidget {
           height: 40,
           child: Row(
             children: [
-              const HugeIcon(icon: HugeIcons.strokeRoundedEdit02, size: 18, color: AppColors.textPrimary),
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedEdit02,
+                size: 18,
+                color: AppColors.textPrimary,
+              ),
               const SizedBox(width: 12),
               Text('Edit', style: const TextStyle(fontSize: 15)),
             ],
@@ -372,9 +421,16 @@ class _MoreMenu extends StatelessWidget {
           height: 40,
           child: Row(
             children: [
-              const HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedDelete02,
+                size: 18,
+                color: AppColors.error,
+              ),
               const SizedBox(width: 12),
-              Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 15)),
+              Text(
+                'Delete',
+                style: TextStyle(color: AppColors.error, fontSize: 15),
+              ),
             ],
           ),
         ),
@@ -416,10 +472,7 @@ class _BooleanHabitControl extends StatelessWidget {
         decoration: BoxDecoration(
           color: isCompleted ? habitColor : Colors.transparent,
           shape: BoxShape.circle,
-          border: Border.all(
-            color: habitColor,
-            width: 2.5,
-          ),
+          border: Border.all(color: habitColor, width: 2.5),
           boxShadow: isCompleted
               ? [
                   BoxShadow(
@@ -431,7 +484,11 @@ class _BooleanHabitControl extends StatelessWidget {
               : null,
         ),
         child: isCompleted
-            ? const HugeIcon(icon: HugeIcons.strokeRoundedTick02, color: Colors.white, size: 20)
+            ? const HugeIcon(
+                icon: HugeIcons.strokeRoundedTick02,
+                color: Colors.white,
+                size: 20,
+              )
             : null,
       ),
     );
@@ -523,7 +580,10 @@ class _UnitHabitControl extends StatelessWidget {
                   const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   TextButton(
@@ -551,14 +611,9 @@ class _UnitHabitControl extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isCompleted
-              ? habitColor.withOpacity(0.2)
-              : AppColors.surface,
+          color: isCompleted ? habitColor.withOpacity(0.2) : AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: habitColor.withOpacity(0.5),
-            width: 1.5,
-          ),
+          border: Border.all(color: habitColor.withOpacity(0.5), width: 1.5),
         ),
         child: Text(
           isCompleted
@@ -595,7 +650,9 @@ class _CompactContributionGrid extends StatelessWidget {
   Widget _buildFullWidthGrid(Map<String, HabitLog> logMap) {
     final now = DateTime.now();
     final endDate = DateTime(now.year, now.month, now.day);
-    final startDate = endDate.subtract(const Duration(days: 180)); // Approx 6 months
+    final startDate = endDate.subtract(
+      const Duration(days: 180),
+    ); // Approx 6 months
     final totalDays = endDate.difference(startDate).inDays + 1;
     final weeks = (totalDays / 7).ceil();
 
@@ -618,7 +675,9 @@ class _CompactContributionGrid extends StatelessWidget {
                   padding: EdgeInsets.only(left: weekIndex > 0 ? spacing : 0),
                   child: Column(
                     children: List.generate(7, (dayIndex) {
-                      final date = startDate.add(Duration(days: (weekIndex * 7) + dayIndex));
+                      final date = startDate.add(
+                        Duration(days: (weekIndex * 7) + dayIndex),
+                      );
 
                       if (date.isAfter(endDate)) {
                         return SizedBox(
@@ -632,12 +691,17 @@ class _CompactContributionGrid extends StatelessWidget {
                       final completionPercent = _getCompletionPercent(log);
 
                       return Padding(
-                        padding: EdgeInsets.only(top: dayIndex > 0 ? spacing : 0),
+                        padding: EdgeInsets.only(
+                          top: dayIndex > 0 ? spacing : 0,
+                        ),
                         child: Container(
                           width: finalSquareSize,
                           height: finalSquareSize,
                           decoration: BoxDecoration(
-                            color: _getIntensityColor(completionPercent, habitColor),
+                            color: _getIntensityColor(
+                              completionPercent,
+                              habitColor,
+                            ),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:financialtracker/core/theme/colors.dart';
 import 'package:financialtracker/database/crud.dart';
@@ -28,6 +30,8 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSidebarOpen = false;
+  bool _isSelectionMode = false;
+  final Set<int> _selectedNoteIds = {};
 
   @override
   void dispose() {
@@ -39,6 +43,68 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     setState(() {
       _isSidebarOpen = !_isSidebarOpen;
     });
+  }
+
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      if (!_isSelectionMode) {
+        _selectedNoteIds.clear();
+      }
+    });
+  }
+
+  void _toggleNoteSelection(int noteId) {
+    setState(() {
+      if (_selectedNoteIds.contains(noteId)) {
+        _selectedNoteIds.remove(noteId);
+      } else {
+        _selectedNoteIds.add(noteId);
+      }
+    });
+  }
+
+  Future<void> _deleteSelectedNotes(AppDatabase database) async {
+    if (_selectedNoteIds.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Delete Notes',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+        ),
+        content: Text(
+          'Are you sure you want to delete ${_selectedNoteIds.length} note${_selectedNoteIds.length > 1 ? 's' : ''}?',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      for (final noteId in _selectedNoteIds) {
+        await database.deleteNote(noteId);
+      }
+      setState(() {
+        _selectedNoteIds.clear();
+        _isSelectionMode = false;
+      });
+    }
   }
 
   @override
@@ -54,16 +120,14 @@ class _NotesPageState extends ConsumerState<NotesPage> {
           children: [
             // Main content
             _buildMainContent(database, selectedFolder, selectedTag),
-            
+
             // Sidebar overlay
             if (_isSidebarOpen)
               GestureDetector(
                 onTap: _toggleSidebar,
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.5),
-                ),
+                child: Container(color: Colors.black.withValues(alpha: 0.5)),
               ),
-            
+
             // Sidebar
             AnimatedPositioned(
               duration: const Duration(milliseconds: 250),
@@ -77,22 +141,28 @@ class _NotesPageState extends ConsumerState<NotesPage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _createNewNote(context, selectedFolder),
-        backgroundColor: AppColors.accentBlue,
-        child: const HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.textPrimary),
-      ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : FloatingActionButton(
+              onPressed: () => _createNewNote(context, selectedFolder),
+              backgroundColor: AppColors.accentBlue,
+              child: const HugeIcon(
+                icon: HugeIcons.strokeRoundedAdd01,
+                color: AppColors.textPrimary,
+              ),
+            ),
     );
   }
 
   Widget _buildSidebar(AppDatabase database) {
+    final selectedFolder = ref.watch(selectedFolderProvider);
+    final selectedTag = ref.watch(selectedTagProvider);
+
     return Container(
       width: 250,
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border(
-          right: BorderSide(color: AppColors.border, width: 0.5),
-        ),
+        border: Border(right: BorderSide(color: AppColors.border, width: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,7 +188,11 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                 ),
                 IconButton(
                   onPressed: _toggleSidebar,
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, color: AppColors.textSecondary, size: 20),
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedCancel01,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -128,26 +202,43 @@ class _NotesPageState extends ConsumerState<NotesPage> {
 
           // Quick filters
           _buildSidebarItem(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedNote02, size: 20, color: AppColors.textSecondary),
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedNote02,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
             label: 'All Notes',
+            isSelected: selectedFolder == null && selectedTag == null,
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state = null;
               ref.read(selectedTagProvider.notifier).state = null;
             },
           ),
           _buildSidebarItem(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedPin, size: 20, color: AppColors.textSecondary),
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedPin,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
             label: 'Pinned',
+            isSelected: selectedFolder == -1,
             onTap: () {
-              ref.read(selectedFolderProvider.notifier).state = -1; // Special: pinned
+              ref.read(selectedFolderProvider.notifier).state =
+                  -1; // Special: pinned
               ref.read(selectedTagProvider.notifier).state = null;
             },
           ),
           _buildSidebarItem(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedChart01, size: 20, color: AppColors.textSecondary),
+            icon: const HugeIcon(
+              icon: HugeIcons.strokeRoundedChart01,
+              size: 20,
+              color: AppColors.textSecondary,
+            ),
             label: 'Favorites',
+            isSelected: selectedFolder == -2,
             onTap: () {
-              ref.read(selectedFolderProvider.notifier).state = -2; // Special: favorites
+              ref.read(selectedFolderProvider.notifier).state =
+                  -2; // Special: favorites
               ref.read(selectedTagProvider.notifier).state = null;
             },
           ),
@@ -187,7 +278,11 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             padding: const EdgeInsets.all(12),
             child: TextButton.icon(
               onPressed: () => _showAddFolderDialog(context, database),
-              icon: const HugeIcon(icon: HugeIcons.strokeRoundedHdd, size: 16, color: AppColors.accentBlue),
+              icon: const HugeIcon(
+                icon: HugeIcons.strokeRoundedHdd,
+                size: 16,
+                color: AppColors.accentBlue,
+              ),
               label: const Text(
                 'New Folder',
                 style: TextStyle(color: AppColors.accentBlue, fontSize: 13),
@@ -202,6 +297,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   Widget _buildSidebarItem({
     required Widget icon,
     required String label,
+    required bool isSelected,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -209,17 +305,21 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         onTap();
         _toggleSidebar(); // Close sidebar after selection
       },
-      child: Padding(
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        color: isSelected ? AppColors.elevatedSurface : Colors.transparent,
         child: Row(
           children: [
             icon,
             const SizedBox(width: 12),
             Text(
               label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: isSelected
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
                 fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
           ],
@@ -253,7 +353,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               child: Text(
                 folder.name,
                 style: TextStyle(
-                  color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                  color: isSelected
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
                   fontSize: 14,
                 ),
                 maxLines: 1,
@@ -266,7 +368,11 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     );
   }
 
-  Widget _buildMainContent(AppDatabase database, int? selectedFolder, int? selectedTag) {
+  Widget _buildMainContent(
+    AppDatabase database,
+    int? selectedFolder,
+    int? selectedTag,
+  ) {
     return Column(
       children: [
         // Header with menu button and search bar
@@ -274,74 +380,150 @@ class _NotesPageState extends ConsumerState<NotesPage> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              // Menu button to toggle sidebar
-              IconButton(
-                onPressed: _toggleSidebar,
-                icon: HugeIcon(icon: HugeIcons.strokeRoundedMenu01, color: AppColors.textPrimary),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 12),
-              
-              // Search bar
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Search notes...',
-                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-                    filled: true,
-                    fillColor: AppColors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.border, width: 0.5),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.border, width: 0.5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.accentBlue, width: 1),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              // Menu button to toggle sidebar or cancel selection
+              if (!_isSelectionMode)
+                IconButton(
+                  onPressed: _toggleSidebar,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedMenu01,
+                    color: AppColors.textPrimary,
                   ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                )
+              else
+                IconButton(
+                  onPressed: _toggleSelectionMode,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedCancel01,
+                    color: AppColors.textPrimary,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
+              const SizedBox(width: 12),
+
+              // Search bar or selection counter
+              Expanded(
+                child: _isSelectionMode
+                    ? Text(
+                        '${_selectedNoteIds.length} selected',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    : TextField(
+                        controller: _searchController,
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search notes...',
+                          hintStyle: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 14,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                              width: 0.5,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
+                              width: 0.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: AppColors.accentBlue,
+                              width: 1,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
               ),
+              if (_isSelectionMode) ...[
+                const SizedBox(width: 16),
+                IconButton(
+                  onPressed: () => _deleteSelectedNotes(database),
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedDelete02,
+                    color: Colors.red,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ] else ...[
+                const SizedBox(width: 16),
+                IconButton(
+                  onPressed: _toggleSelectionMode,
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedTick02,
+                    color: AppColors.textPrimary,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ],
           ),
         ),
 
         // Notes grid
-        Expanded(
-          child: _buildNotesList(database, selectedFolder, selectedTag),
-        ),
+        Expanded(child: _buildNotesList(database, selectedFolder, selectedTag)),
       ],
     );
   }
 
-  Widget _buildNotesList(AppDatabase database, int? selectedFolder, int? selectedTag) {
-    final source = _getNotesSource(database, selectedFolder, selectedTag, _searchQuery);
-    return _NotesGridDataLoader(
-      source: source,
-      database: database,
+  Widget _buildNotesList(
+    AppDatabase database,
+    int? selectedFolder,
+    int? selectedTag,
+  ) {
+    final source = _getNotesSource(
+      database,
+      selectedFolder,
+      selectedTag,
+      _searchQuery,
     );
+    return _NotesGridDataLoader(source: source, database: database);
   }
 
   // Helper to determine the data source (Future or Stream)
-  Object _getNotesSource(AppDatabase database, int? folder, int? tag, String query) {
+  Object _getNotesSource(
+    AppDatabase database,
+    int? folder,
+    int? tag,
+    String query,
+  ) {
     if (query.isNotEmpty) {
       return database.searchNotes(query);
     }
     if (tag != null) {
       return database.getNotesByTag(tag);
     }
-    if (folder == -1) { // Pinned
+    if (folder == -1) {
+      // Pinned
       return database.getPinnedNotes();
     }
-    if (folder == -2) { // Favorites
+    if (folder == -2) {
+      // Favorites
       return database.getFavoriteNotes();
     }
     return database.watchNotesByFolder(folder);
@@ -349,7 +531,10 @@ class _NotesPageState extends ConsumerState<NotesPage> {
 
   // This widget takes a Future<List<Note>> or Stream<List<Note>>,
   // fetches the tags for them, and builds the final grid.
-  Widget _NotesGridDataLoader({required Object source, required AppDatabase database}) {
+  Widget _NotesGridDataLoader({
+    required Object source,
+    required AppDatabase database,
+  }) {
     if (source is Stream<List<Note>>) {
       return StreamBuilder<List<Note>>(
         stream: source,
@@ -364,7 +549,8 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         builder: (context, snapshot) {
           final notes = snapshot.data ?? [];
           // Avoid fetching tags while the future is still running
-          if (snapshot.connectionState != ConnectionState.done && notes.isEmpty) {
+          if (snapshot.connectionState != ConnectionState.done &&
+              notes.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
           return _buildGridWithFetchedTags(notes, database);
@@ -428,10 +614,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             const SizedBox(height: 8),
             Text(
               'Tap + to create your first note!',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
           ],
         ),
@@ -457,14 +640,34 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   Widget _buildNoteCard(NoteWithTags noteWithTags) {
     final note = noteWithTags.note;
     final tags = noteWithTags.tags;
+    final isSelected = _selectedNoteIds.contains(note.id);
 
     return InkWell(
-      onTap: () => _editNote(context, note),
+      onTap: () {
+        if (_isSelectionMode) {
+          _toggleNoteSelection(note.id);
+        } else {
+          _editNote(context, note);
+        }
+      },
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedNoteIds.add(note.id);
+          });
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: isSelected
+              ? AppColors.accentBlue.withValues(alpha: 0.1)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border, width: 0.5),
+          border: Border.all(
+            color: isSelected ? AppColors.accentBlue : AppColors.border,
+            width: isSelected ? 2 : 0.5,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,38 +678,66 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      note.title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                  if (_isSelectionMode)
+                    HugeIcon(
+                      icon: isSelected
+                          ? HugeIcons.strokeRoundedCheckmarkCircle02
+                          : HugeIcons.strokeRoundedCircle,
+                      color: isSelected
+                          ? AppColors.accentBlue
+                          : AppColors.textMuted,
+                      size: 24,
+                    )
+                  else
+                    Expanded(
+                      child: Text(
+                        note.title,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (note.isPinned)
-                        const HugeIcon(
-                          icon: HugeIcons.strokeRoundedPin,
-                          size: 16,
-                          color: AppColors.accentBlue,
-                        ),
-                      if (note.isFavorite)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 4),
-                          child: HugeIcon(
-                            icon: HugeIcons.strokeRoundedChart01,
+                  if (!_isSelectionMode)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (note.isPinned)
+                          const HugeIcon(
+                            icon: HugeIcons.strokeRoundedPin,
                             size: 16,
-                            color: AppColors.error,
+                            color: AppColors.accentBlue,
                           ),
+                        if (note.isFavorite)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 4),
+                            child: HugeIcon(
+                              icon: HugeIcons.strokeRoundedChart01,
+                              size: 16,
+                              color: AppColors.error,
+                            ),
+                          ),
+                      ],
+                    ),
+                  if (_isSelectionMode)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Text(
+                          note.title,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -537,10 +768,14 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                   runSpacing: 6,
                   children: tags.take(3).map((tag) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: Color(int.parse('FF${tag.color}', radix: 16))
-                            .withOpacity(0.2),
+                        color: Color(
+                          int.parse('FF${tag.color}', radix: 16),
+                        ).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -581,9 +816,33 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   }
 
   String _getPlainTextPreview(String jsonContent) {
-    // Simple extraction - in reality, you'd parse the Quill JSON
     try {
-      final text = jsonContent.replaceAll(RegExp(r'[{}\[\]"]'), '');
+      // Parse the Quill Delta JSON format
+      final decoded = json.decode(jsonContent);
+      final StringBuffer textBuffer = StringBuffer();
+
+      if (decoded is List) {
+        for (final op in decoded) {
+          if (op is Map && op.containsKey('insert')) {
+            final insert = op['insert'];
+            if (insert is String) {
+              textBuffer.write(insert);
+            }
+          }
+        }
+      }
+
+      // Clean up the text
+      String text = textBuffer
+          .toString()
+          .replaceAll('\n', ' ')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+
+      if (text.isEmpty) {
+        return 'No content';
+      }
+
       if (text.length > 200) {
         return '${text.substring(0, 200)}...';
       }
@@ -618,11 +877,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   }
 
   void _editNote(BuildContext context, Note note) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => NoteEditorPage(note: note),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => NoteEditorPage(note: note)));
   }
 
   void _showAddFolderDialog(BuildContext context, AppDatabase database) {
@@ -661,7 +918,10 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -675,7 +935,10 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                 if (context.mounted) Navigator.of(context).pop();
               }
             },
-            child: const Text('Create', style: TextStyle(color: AppColors.accentBlue)),
+            child: const Text(
+              'Create',
+              style: TextStyle(color: AppColors.accentBlue),
+            ),
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+import 'package:financialtracker/features/habits/habit_with_details.dart';
 import 'package:flutter/material.dart';
 import '../../database/crud.dart';
 import '../../core/theme/colors.dart';
@@ -5,45 +6,25 @@ import 'package:intl/intl.dart';
 
 // Contribution Grid Widget (GitHub-style)
 class ContributionGrid extends StatelessWidget {
-  final Habit habit;
-  final AppDatabase database;
+  final HabitWithDetails habitWithDetails;
   final Color habitColor;
 
   const ContributionGrid({
     super.key,
-    required this.habit,
-    required this.database,
+    required this.habitWithDetails,
     required this.habitColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<HabitLog>>(
-      future: _getLast90DaysLogs(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox(
-            height: 120,
-            child: Center(
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
-            ),
-          );
-        }
+    final logs = habitWithDetails.logs;
+    final logMap = <String, HabitLog>{};
+    for (final log in logs) {
+      final key = _dateKey(log.date);
+      logMap[key] = log;
+    }
 
-        final logs = snapshot.data ?? [];
-        final logMap = <String, HabitLog>{};
-        for (final log in logs) {
-          final key = _dateKey(log.date);
-          logMap[key] = log;
-        }
-
-        return _buildGrid(logMap);
-      },
-    );
-  }
-
-  Future<List<HabitLog>> _getLast90DaysLogs() async {
-    return database.getHabitLogs(habit.id);
+    return _buildGrid(logMap);
   }
 
   Widget _buildGrid(Map<String, HabitLog> logMap) {
@@ -186,6 +167,7 @@ class ContributionGrid extends StatelessWidget {
 
   double _getCompletionPercent(HabitLog? log) {
     if (log == null) return 0;
+    final habit = habitWithDetails.habit;
 
     if (habit.goalType == 'boolean') {
       return 100;
@@ -199,6 +181,7 @@ class ContributionGrid extends StatelessWidget {
 
   String _getTooltip(DateTime date, HabitLog? log) {
     final dateStr = DateFormat('MMM d, yyyy').format(date);
+    final habit = habitWithDetails.habit;
 
     if (log == null) {
       return '$dateStr\nNo activity';
