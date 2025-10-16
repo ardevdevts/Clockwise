@@ -19,6 +19,7 @@ class Todos extends Table {
   TextColumn get title => text().withLength(min: 1, max: 150)();
   TextColumn get description => text().nullable()();
   TextColumn get notes => text().nullable()();
+  IntColumn get noteId => integer().nullable().references(Notes, #id, onDelete: KeyAction.setNull)();
   IntColumn get priority => intEnum<Priority>()();
   BoolColumn get completed =>
       boolean().withDefault(const Constant(false))();

@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
 
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   // Migration strategy
   @override
@@ -52,6 +52,10 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createTable(notes);
         await migrator.createTable(tags);
         await migrator.createTable(noteTags);
+      }
+      if (from < 8) {
+        // Add noteId column to todos table
+        await migrator.addColumn(todos, todos.noteId);
       }
     },
     beforeOpen: (details) async {
@@ -282,9 +286,6 @@ class AppDatabase extends _$AppDatabase {
     final logsStream = watchHabitLogs(habitId);
 
     return Rx.combineLatest2(habitStream, logsStream, (habit, logs) {
-      if (habit == null) {
-        throw Exception('Habit not found');
-      }
       return HabitWithDetails(habit: habit, logs: logs);
     });
   }
@@ -526,6 +527,16 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  // Get count of todos linked to a note
+  Future<int> getLinkedTodosCount(int noteId) async {
+    final query = selectOnly(todos)
+      ..addColumns([todos.id.count()])
+      ..where(todos.noteId.equals(noteId));
+    
+    final result = await query.getSingle();
+    return result.read(todos.id.count()) ?? 0;
+  }
+
   // Tags
   Future<List<Tag>> get allTags => select(tags).get();
   
@@ -591,8 +602,6 @@ class AppDatabase extends _$AppDatabase {
       final habitsWithDetails = <HabitWithDetails>[];
       for (final habit in habits) {
         final today = DateTime.now();
-        final todayLog = await getHabitLogForDate(habit.id, today);
-        final lastLog = await getLastHabitLog(habit.id);
 
         final endDate = DateTime(today.year, today.month, today.day);
         // The grid in habits_page.dart shows 180 days.

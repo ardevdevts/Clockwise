@@ -11,14 +11,6 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../../database/database_provider.dart';
 
-// A data class to hold a note and its associated tags, preventing N+1 queries in the UI.
-class NoteWithTags {
-  final Note note;
-  final List<Tag> tags;
-
-  NoteWithTags({required this.note, required this.tags});
-}
-
 class NotesPage extends ConsumerStatefulWidget {
   const NotesPage({super.key});
 
@@ -32,6 +24,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   bool _isSidebarOpen = false;
   bool _isSelectionMode = false;
   final Set<int> _selectedNoteIds = {};
+  final Set<int> _expandedFolderIds = {}; // Track which folders are expanded
 
   @override
   void dispose() {
@@ -111,7 +104,6 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   Widget build(BuildContext context) {
     final database = ref.watch(databaseProvider);
     final selectedFolder = ref.watch(selectedFolderProvider);
-    final selectedTag = ref.watch(selectedTagProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -119,7 +111,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         child: Stack(
           children: [
             // Main content
-            _buildMainContent(database, selectedFolder, selectedTag),
+            _buildMainContent(database, selectedFolder),
 
             // Sidebar overlay
             if (_isSidebarOpen)
@@ -156,7 +148,6 @@ class _NotesPageState extends ConsumerState<NotesPage> {
 
   Widget _buildSidebar(AppDatabase database) {
     final selectedFolder = ref.watch(selectedFolderProvider);
-    final selectedTag = ref.watch(selectedTagProvider);
 
     return Container(
       width: 250,
@@ -208,10 +199,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               color: AppColors.textSecondary,
             ),
             label: 'All Notes',
-            isSelected: selectedFolder == null && selectedTag == null,
+            isSelected: selectedFolder == null,
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state = null;
-              ref.read(selectedTagProvider.notifier).state = null;
             },
           ),
           _buildSidebarItem(
@@ -225,7 +215,6 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state =
                   -1; // Special: pinned
-              ref.read(selectedTagProvider.notifier).state = null;
             },
           ),
           _buildSidebarItem(
@@ -239,7 +228,6 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state =
                   -2; // Special: favorites
-              ref.read(selectedTagProvider.notifier).state = null;
             },
           ),
 
@@ -262,13 +250,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               stream: database.watchNoteFolders(),
               builder: (context, snapshot) {
                 final folders = snapshot.data ?? [];
-                return ListView.builder(
-                  itemCount: folders.length,
-                  itemBuilder: (context, index) {
-                    final folder = folders[index];
-                    return _buildFolderItem(folder);
-                  },
-                );
+                return _buildFolderTree(folders);
               },
             ),
           ),
@@ -328,50 +310,232 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     );
   }
 
-  Widget _buildFolderItem(NoteFolder folder) {
+  // Build hierarchical folder tree
+  Widget _buildFolderTree(List<NoteFolder> allFolders) {
+    // Organize folders by parent
+    final Map<int?, List<NoteFolder>> foldersByParent = {};
+    for (final folder in allFolders) {
+      foldersByParent.putIfAbsent(folder.parentId, () => []).add(folder);
+    }
+    
+    // Build tree starting from root folders (parentId == null)
+    final rootFolders = foldersByParent[null] ?? [];
+    
+    return ListView(
+      children: rootFolders.map((folder) => _buildFolderTreeItem(folder, foldersByParent, 0)).toList(),
+    );
+  }
+
+  Widget _buildFolderTreeItem(NoteFolder folder, Map<int?, List<NoteFolder>> foldersByParent, int depth) {
     final selectedFolder = ref.watch(selectedFolderProvider);
     final isSelected = selectedFolder == folder.id;
+    final hasChildren = foldersByParent[folder.id]?.isNotEmpty ?? false;
+    final isExpanded = _expandedFolderIds.contains(folder.id);
+    final children = foldersByParent[folder.id] ?? [];
 
-    return InkWell(
-      onTap: () {
-        ref.read(selectedFolderProvider.notifier).state = folder.id;
-        ref.read(selectedTagProvider.notifier).state = null;
-        _toggleSidebar(); // Close sidebar after selection
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        color: isSelected ? AppColors.elevatedSurface : Colors.transparent,
-        child: Row(
-          children: [
-            HugeIcon(
-              icon: HugeIcons.strokeRoundedFolder01,
-              size: 20,
-              color: Color(int.parse('FF${folder.color}', radix: 16)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () {
+            ref.read(selectedFolderProvider.notifier).state = folder.id;
+            _toggleSidebar(); // Close sidebar after selection
+          },
+          onLongPress: () => _showFolderContextMenu(context, folder),
+          child: Container(
+            padding: EdgeInsets.only(
+              left: 16.0 + (depth * 20.0),
+              right: 16,
+              top: 10,
+              bottom: 10,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                folder.name,
-                style: TextStyle(
-                  color: isSelected
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontSize: 14,
+            color: isSelected ? AppColors.elevatedSurface : Colors.transparent,
+            child: Row(
+              children: [
+                if (hasChildren)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isExpanded) {
+                          _expandedFolderIds.remove(folder.id);
+                        } else {
+                          _expandedFolderIds.add(folder.id);
+                        }
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: HugeIcon(
+                        icon: isExpanded
+                            ? HugeIcons.strokeRoundedArrowDown01
+                            : HugeIcons.strokeRoundedArrowRight01,
+                        size: 16,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(width: 20),
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedFolder01,
+                  size: 20,
+                  color: Color(int.parse('FF${folder.color}', radix: 16)),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    folder.name,
+                    style: TextStyle(
+                      color: isSelected
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (hasChildren && isExpanded)
+          ...children.map((child) => _buildFolderTreeItem(child, foldersByParent, depth + 1)),
+      ],
+    );
+  }
+
+  void _showFolderContextMenu(BuildContext context, NoteFolder folder) {
+    final database = ref.read(databaseProvider);
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(
+          folder.name,
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const HugeIcon(
+                icon: HugeIcons.strokeRoundedFolderAdd,
+                size: 20,
+                color: AppColors.accentBlue,
               ),
+              title: const Text(
+                'New Subfolder',
+                style: TextStyle(color: AppColors.textPrimary),
+              ),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showAddFolderDialog(context, database, parentFolder: folder);
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const HugeIcon(
+                icon: HugeIcons.strokeRoundedDelete02,
+                size: 20,
+                color: Colors.red,
+              ),
+              title: const Text(
+                'Delete Folder',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () async {
+                Navigator.of(context).pop();
+                await _deleteFolder(context, database, folder);
+              },
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Close',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _deleteFolder(BuildContext context, AppDatabase database, NoteFolder folder) async {
+    // Check if folder has subfolders
+    final allFolders = await database.allNoteFolders;
+    final subfolders = allFolders.where((f) => f.parentId == folder.id).toList();
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Delete Folder',
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+        ),
+        content: Text(
+          subfolders.isNotEmpty
+              ? 'Are you sure you want to delete "${folder.name}" and its ${subfolders.length} subfolder${subfolders.length > 1 ? 's' : ''}? All notes in these folders will be permanently deleted.'
+              : 'Are you sure you want to delete "${folder.name}"? All notes in this folder will be permanently deleted.',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Delete all subfolders recursively first
+      await _deleteSubfoldersRecursively(database, folder.id);
+      // Delete all notes in this folder
+      final notesInFolder = await database.getNotesByFolder(folder.id);
+      for (final note in notesInFolder) {
+        await database.deleteNote(note.id);
+      }
+      // Then delete the folder itself
+      await database.deleteNoteFolder(folder.id);
+    }
+  }
+
+  Future<void> _deleteSubfoldersRecursively(AppDatabase database, int parentFolderId) async {
+    final allFolders = await database.allNoteFolders;
+    final subfolders = allFolders.where((f) => f.parentId == parentFolderId).toList();
+    
+    for (final subfolder in subfolders) {
+      // Recursively delete subfolders of this subfolder
+      await _deleteSubfoldersRecursively(database, subfolder.id);
+      // Delete all notes in this subfolder
+      final notesInFolder = await database.getNotesByFolder(subfolder.id);
+      for (final note in notesInFolder) {
+        await database.deleteNote(note.id);
+      }
+      // Delete this subfolder
+      await database.deleteNoteFolder(subfolder.id);
+    }
   }
 
   Widget _buildMainContent(
     AppDatabase database,
     int? selectedFolder,
-    int? selectedTag,
   ) {
     return Column(
       children: [
@@ -486,7 +650,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         ),
 
         // Notes grid
-        Expanded(child: _buildNotesList(database, selectedFolder, selectedTag)),
+        Expanded(child: _buildNotesList(database, selectedFolder)),
       ],
     );
   }
@@ -494,29 +658,23 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   Widget _buildNotesList(
     AppDatabase database,
     int? selectedFolder,
-    int? selectedTag,
   ) {
     final source = _getNotesSource(
       database,
       selectedFolder,
-      selectedTag,
       _searchQuery,
     );
-    return _NotesGridDataLoader(source: source, database: database);
+    return _notesGridDataLoader(source: source, database: database);
   }
 
   // Helper to determine the data source (Future or Stream)
   Object _getNotesSource(
     AppDatabase database,
     int? folder,
-    int? tag,
     String query,
   ) {
     if (query.isNotEmpty) {
       return database.searchNotes(query);
-    }
-    if (tag != null) {
-      return database.getNotesByTag(tag);
     }
     if (folder == -1) {
       // Pinned
@@ -529,9 +687,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     return database.watchNotesByFolder(folder);
   }
 
-  // This widget takes a Future<List<Note>> or Stream<List<Note>>,
-  // fetches the tags for them, and builds the final grid.
-  Widget _NotesGridDataLoader({
+  // This widget takes a Future<List<Note>> or Stream<List<Note>>
+  // and builds the final grid.
+  Widget _notesGridDataLoader({
     required Object source,
     required AppDatabase database,
   }) {
@@ -540,7 +698,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         stream: source,
         builder: (context, snapshot) {
           final notes = snapshot.data ?? [];
-          return _buildGridWithFetchedTags(notes, database);
+          return _buildNotesGrid(notes);
         },
       );
     } else if (source is Future<List<Note>>) {
@@ -548,51 +706,20 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         future: source,
         builder: (context, snapshot) {
           final notes = snapshot.data ?? [];
-          // Avoid fetching tags while the future is still running
+          // Avoid showing loading while the future is still running
           if (snapshot.connectionState != ConnectionState.done &&
               notes.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
-          return _buildGridWithFetchedTags(notes, database);
+          return _buildNotesGrid(notes);
         },
       );
     }
     return Container(); // Should not happen
   }
 
-  // Helper widget to fetch tags in parallel and build the grid
-  Widget _buildGridWithFetchedTags(List<Note> notes, AppDatabase database) {
+  Widget _buildNotesGrid(List<Note> notes) {
     if (notes.isEmpty) {
-      return _buildNotesGrid([]); // Return the empty state grid
-    }
-
-    // Fetch all tags for the list of notes in parallel.
-    // This is still N queries, but Future.wait runs them concurrently,
-    // which is a marginal improvement over sequential fetches in a list.
-    final tagsFuture = Future.wait(
-      notes.map((note) => database.getTagsForNote(note.id)),
-    );
-
-    return FutureBuilder<List<List<Tag>>>(
-      future: tagsFuture,
-      builder: (context, tagsSnapshot) {
-        if (!tagsSnapshot.hasData) {
-          // Show a loading state or the grid with no tags while they load
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final allTags = tagsSnapshot.data!;
-        final notesWithTags = List.generate(notes.length, (i) {
-          return NoteWithTags(note: notes[i], tags: allTags[i]);
-        });
-
-        return _buildNotesGrid(notesWithTags);
-      },
-    );
-  }
-
-  Widget _buildNotesGrid(List<NoteWithTags> notesWithTags) {
-    if (notesWithTags.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -629,18 +756,17 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemCount: notesWithTags.length,
+      itemCount: notes.length,
       itemBuilder: (context, index) {
-        final noteWithTags = notesWithTags[index];
-        return _buildNoteCard(noteWithTags);
+        final note = notes[index];
+        return _buildNoteCard(note);
       },
     );
   }
 
-  Widget _buildNoteCard(NoteWithTags noteWithTags) {
-    final note = noteWithTags.note;
-    final tags = noteWithTags.tags;
+  Widget _buildNoteCard(Note note) {
     final isSelected = _selectedNoteIds.contains(note.id);
+    final database = ref.watch(databaseProvider);
 
     return InkWell(
       onTap: () {
@@ -705,6 +831,51 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Task badge
+                        FutureBuilder<int>(
+                          future: database.getLinkedTodosCount(note.id),
+                          builder: (context, snapshot) {
+                            final todoCount = snapshot.data ?? 0;
+                            if (todoCount == 0) return const SizedBox.shrink();
+                            
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentBlue.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: AppColors.accentBlue,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const HugeIcon(
+                                      icon: HugeIcons.strokeRoundedTask01,
+                                      size: 12,
+                                      color: AppColors.accentBlue,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '$todoCount',
+                                      style: const TextStyle(
+                                        color: AppColors.accentBlue,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                         if (note.isPinned)
                           const HugeIcon(
                             icon: HugeIcons.strokeRoundedPin,
@@ -758,40 +929,6 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                 ),
               ),
             ),
-
-            // Tags
-            if (tags.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: tags.take(3).map((tag) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color(
-                          int.parse('FF${tag.color}', radix: 16),
-                        ).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        tag.name,
-                        style: TextStyle(
-                          color: Color(int.parse('FF${tag.color}', radix: 16)),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              )
-            else
-              const SizedBox(height: 12),
 
             // Footer
             Container(
@@ -882,7 +1019,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     ).push(MaterialPageRoute(builder: (context) => NoteEditorPage(note: note)));
   }
 
-  void _showAddFolderDialog(BuildContext context, AppDatabase database) {
+  void _showAddFolderDialog(BuildContext context, AppDatabase database, {NoteFolder? parentFolder}) {
     final nameController = TextEditingController();
     String selectedColor = '00ADEF';
 
@@ -891,9 +1028,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
       barrierColor: Colors.black87,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text(
-          'New Folder',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+        title: Text(
+          parentFolder != null ? 'New Subfolder in ${parentFolder.name}' : 'New Folder',
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -930,9 +1067,16 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                   NoteFoldersCompanion.insert(
                     name: nameController.text.trim(),
                     color: drift.Value(selectedColor),
+                    parentId: drift.Value(parentFolder?.id),
                   ),
                 );
                 if (context.mounted) Navigator.of(context).pop();
+                // Expand parent folder if creating a subfolder
+                if (parentFolder != null) {
+                  setState(() {
+                    _expandedFolderIds.add(parentFolder.id);
+                  });
+                }
               }
             },
             child: const Text(

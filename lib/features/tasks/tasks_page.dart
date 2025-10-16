@@ -14,6 +14,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'dart:io';
+import '../notes/note_editor_page.dart';
 
 class TasksPage extends ConsumerStatefulWidget {
   const TasksPage({super.key});
@@ -1311,7 +1312,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
                         // Notes Section
                         _NotesSection(
-                          notes: task.notes,
+                          task: task,
                           onEdit: () => _showNotesDialog(context, database),
                         ),
 
@@ -1348,7 +1349,22 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     );
   }
   
-  void _showNotesDialog(BuildContext context, AppDatabase database) {
+  Future<void> _showNotesDialog(BuildContext context, AppDatabase database) async {
+    // If task already has a linked note, navigate to edit it
+    if (widget.task.noteId != null) {
+      final note = await database.getNoteById(widget.task.noteId!);
+      if (note != null && context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => NoteEditorPage(note: note),
+          ),
+        );
+        return;
+      }
+    }
+
+    // Otherwise, create a new note
+    final titleController = TextEditingController(text: 'Note for: ${widget.task.title}');
     final notesController = TextEditingController(text: widget.task.notes ?? '');
 
     showDialog(
@@ -1364,7 +1380,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Task Notes',
+                'Create Task Note',
                 style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 20,
@@ -1373,21 +1389,46 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
               ),
               const SizedBox(height: 24),
               TextField(
-                controller: notesController,
-                maxLines: 8,
+                controller: titleController,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: InputDecoration(
-                  hintText: 'Add notes...',
-                  hintStyle: TextStyle(color: AppColors.textMuted),
+                  labelText: 'Note Title',
+                  labelStyle: const TextStyle(color: AppColors.textMuted),
                   filled: true,
                   fillColor: AppColors.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.border),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: notesController,
+                maxLines: 8,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Initial Content',
+                  labelStyle: const TextStyle(color: AppColors.textMuted),
+                  hintText: 'Add initial notes content...',
+                  hintStyle: const TextStyle(color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.border),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -1406,13 +1447,29 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: () async {
-                      await database.updateTodo(
-                        widget.task.copyWith(
-                          notes: drift.Value(notesController.text.trim().isEmpty
-                              ? null
-                              : notesController.text.trim()),
+                      if (titleController.text.trim().isEmpty) return;
+
+                      // Convert plain text to Quill Delta format
+                      final content = notesController.text.trim().isEmpty
+                          ? '[{"insert":"\\n"}]'
+                          : '[{"insert":"${notesController.text.trim().replaceAll('"', '\\"').replaceAll('\n', '\\n')}\\n"}]';
+
+                      // Create the note
+                      final noteId = await database.insertNote(
+                        NotesCompanion.insert(
+                          title: titleController.text.trim(),
+                          content: content,
                         ),
                       );
+
+                      // Link the note to the task
+                      await database.updateTodo(
+                        widget.task.copyWith(
+                          noteId: drift.Value(noteId),
+                          notes: drift.Value(notesController.text.trim().isEmpty ? null : notesController.text.trim()),
+                        ),
+                      );
+
                       if (context.mounted) Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -1421,7 +1478,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    child: const Text('Save'),
+                    child: const Text('Create Note'),
                   ),
                 ],
               ),
@@ -2500,17 +2557,19 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
 }
 
 // Notes Section
-class _NotesSection extends StatelessWidget {
-  final String? notes;
+class _NotesSection extends ConsumerWidget {
+  final Todo task;
   final VoidCallback onEdit;
 
   const _NotesSection({
-    required this.notes,
+    required this.task,
     required this.onEdit,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final database = ref.watch(databaseProvider);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2519,20 +2578,76 @@ class _NotesSection extends StatelessWidget {
           icon: Icons.note_outlined,
           onEdit: onEdit,
         ),
-        if (notes != null && notes!.isNotEmpty)
-          _SectionCard(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                notes!,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 14,
-                  height: 1.6,
-                  letterSpacing: 0.2,
+        if (task.noteId != null)
+          FutureBuilder<Note?>(
+            future: database.getNoteById(task.noteId!),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox.shrink();
+              }
+              
+              final note = snapshot.data!;
+              return _SectionCard(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => NoteEditorPage(note: note),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const HugeIcon(
+                          icon: HugeIcons.strokeRoundedNote,
+                          color: AppColors.accentBlue,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                note.title,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (task.notes != null && task.notes!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  task.notes!,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const HugeIcon(
+                          icon: HugeIcons.strokeRoundedArrowRight01,
+                          color: AppColors.accentBlue,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         const SizedBox(height: 8),
       ],

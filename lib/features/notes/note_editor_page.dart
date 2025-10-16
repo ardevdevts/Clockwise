@@ -26,18 +26,23 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   late TextEditingController _titleController;
   final FocusNode _editorFocusNode = FocusNode();
   
-  bool _isPinned = false;
-  bool _isFavorite = false;
-  int? _selectedFolderId;
-  List<Tag> _selectedTags = [];
+  late final ValueNotifier<bool> _isPinnedNotifier;
+  late final ValueNotifier<bool> _isFavoriteNotifier;
+  late final ValueNotifier<int?> _selectedFolderIdNotifier;
+  late final ValueNotifier<List<Tag>> _selectedTagsNotifier;
   bool _isLoading = true;
+  
+  // Cache for database queries
+  List<Tag>? _cachedTags;
+  List<NoteFolder>? _cachedFolders;
 
   @override
   void initState() {
     super.initState();
-    _selectedFolderId = widget.note?.folderId ?? widget.folderId;
-    _isPinned = widget.note?.isPinned ?? false;
-    _isFavorite = widget.note?.isFavorite ?? false;
+    _isPinnedNotifier = ValueNotifier(widget.note?.isPinned ?? false);
+    _isFavoriteNotifier = ValueNotifier(widget.note?.isFavorite ?? false);
+    _selectedFolderIdNotifier = ValueNotifier(widget.note?.folderId ?? widget.folderId);
+    _selectedTagsNotifier = ValueNotifier([]);
     _titleController = TextEditingController(text: widget.note?.title ?? '');
     _initializeEditor();
   }
@@ -53,7 +58,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         
         // Load tags
         final database = ref.read(databaseProvider);
-        _selectedTags = await database.getTagsForNote(widget.note!.id);
+        _selectedTagsNotifier.value = await database.getTagsForNote(widget.note!.id);
       } catch (e) {
         _controller = QuillController.basic();
       }
@@ -61,7 +66,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       _controller = QuillController.basic();
     }
     
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -69,6 +76,10 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     _controller.dispose();
     _titleController.dispose();
     _editorFocusNode.dispose();
+    _isPinnedNotifier.dispose();
+    _isFavoriteNotifier.dispose();
+    _selectedFolderIdNotifier.dispose();
+    _selectedTagsNotifier.dispose();
     super.dispose();
   }
 
@@ -104,20 +115,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-              color: _isPinned ? AppColors.accentBlue : AppColors.textSecondary,
-            ),
-            onPressed: () => setState(() => _isPinned = !_isPinned),
-          ),
-          IconButton(
-            icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_outline,
-              color: _isFavorite ? AppColors.error : AppColors.textSecondary,
-            ),
-            onPressed: () => setState(() => _isFavorite = !_isFavorite),
-          ),
+          _PinButton(notifier: _isPinnedNotifier),
+          _FavoriteButton(notifier: _isFavoriteNotifier),
           IconButton(
             icon: const Icon(Icons.content_paste, color: AppColors.textSecondary),
             onPressed: _pasteMarkdown,
@@ -174,100 +173,68 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           ),
 
           // Tags preview
-          if (_selectedTags.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(
-                  bottom: BorderSide(color: AppColors.border, width: 0.5),
+          ValueListenableBuilder<List<Tag>>(
+            valueListenable: _selectedTagsNotifier,
+            builder: (context, selectedTags, _) {
+              if (selectedTags.isEmpty) return const SizedBox.shrink();
+              
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border(
+                    bottom: BorderSide(color: AppColors.border, width: 0.5),
+                  ),
                 ),
-              ),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _selectedTags.map((tag) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Color(int.parse('FF${tag.color}', radix: 16)).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: Color(int.parse('FF${tag.color}', radix: 16)),
-                        width: 0.5,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: selectedTags.map((tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Color(int.parse('FF${tag.color}', radix: 16)).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: Color(int.parse('FF${tag.color}', radix: 16)),
+                          width: 0.5,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          tag.name,
-                          style: TextStyle(
-                            color: Color(int.parse('FF${tag.color}', radix: 16)),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            tag.name,
+                            style: TextStyle(
+                              color: Color(int.parse('FF${tag.color}', radix: 16)),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedTags.remove(tag);
-                            });
-                          },
-                          child: Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Color(int.parse('FF${tag.color}', radix: 16)),
+                          const SizedBox(width: 4),
+                          InkWell(
+                            onTap: () {
+                              final updated = List<Tag>.from(selectedTags);
+                              updated.remove(tag);
+                              _selectedTagsNotifier.value = updated;
+                            },
+                            child: Icon(
+                              Icons.close,
+                              size: 14,
+                              color: Color(int.parse('FF${tag.color}', radix: 16)),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              );
+            },
+          ),
 
           // Toolbar
-          Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border(
-                bottom: BorderSide(color: AppColors.border, width: 0.5),
-              ),
-            ),
-            child: QuillSimpleToolbar(
-              controller: _controller,
-              config: const QuillSimpleToolbarConfig(
-                multiRowsDisplay: false,
-                showAlignmentButtons: true,
-                showBackgroundColorButton: false,
-                showCenterAlignment: true,
-                showCodeBlock: true,
-                showColorButton: true,
-                showDirection: false,
-                showDividers: true,
-                showFontFamily: false,
-                showFontSize: false,
-                showHeaderStyle: true,
-                showIndent: true,
-                showInlineCode: true,
-                showJustifyAlignment: false,
-                showLeftAlignment: true,
-                showLink: true,
-                showListBullets: true,
-                showListCheck: true,
-                showListNumbers: true,
-                showQuote: true,
-                showRedo: true,
-                showRightAlignment: true,
-                showSmallButton: false,
-                showStrikeThrough: true,
-                showUnderLineButton: true,
-                showUndo: true,
-              ),
-            ),
-          ),
+          _EditorToolbar(controller: _controller),
 
           // Editor
           Expanded(
@@ -380,154 +347,42 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
 
   void _showTagsDialog() async {
     final database = ref.read(databaseProvider);
-    final allTags = await database.allTags;
+    
+    // Cache tags if not already cached
+    _cachedTags ??= await database.allTags;
+    final allTags = _cachedTags!;
 
     if (!mounted) return;
 
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          title: const Text(
-            'Manage Tags',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
-          ),
-          content: SizedBox(
-            width: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Create new tag
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        style: const TextStyle(color: AppColors.textPrimary),
-                        decoration: const InputDecoration(
-                          hintText: 'New tag name',
-                          hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.border),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.accentBlue),
-                          ),
-                        ),
-                        onSubmitted: (value) async {
-                          if (value.trim().isNotEmpty) {
-                            final newTag = await database.insertTag(
-                              TagsCompanion.insert(name: value.trim()),
-                            );
-                            final tag = await database.getTagById(newTag);
-                            if (tag != null) {
-                              setDialogState(() {
-                                _selectedTags.add(tag);
-                              });
-                              setState(() {});
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Tags list
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: allTags.length,
-                    itemBuilder: (context, index) {
-                      final tag = allTags[index];
-                      final isSelected = _selectedTags.any((t) => t.id == tag.id);
-
-                      return CheckboxListTile(
-                        value: isSelected,
-                        onChanged: (value) {
-                          setDialogState(() {
-                            if (value == true) {
-                              _selectedTags.add(tag);
-                            } else {
-                              _selectedTags.removeWhere((t) => t.id == tag.id);
-                            }
-                          });
-                          setState(() {});
-                        },
-                        title: Text(
-                          tag.name,
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                        ),
-                        activeColor: AppColors.accentBlue,
-                        checkColor: AppColors.textPrimary,
-                        side: const BorderSide(color: AppColors.border),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done', style: TextStyle(color: AppColors.accentBlue)),
-            ),
-          ],
-        ),
+      builder: (context) => _TagsDialog(
+        allTags: allTags,
+        selectedTagsNotifier: _selectedTagsNotifier,
+        database: database,
+        onTagsUpdated: () {
+          _cachedTags = null; // Invalidate cache
+        },
       ),
     );
   }
 
   void _showFolderDialog() async {
     final database = ref.read(databaseProvider);
-    final folders = await database.allNoteFolders;
+    
+    // Cache folders if not already cached
+    _cachedFolders ??= await database.allNoteFolders;
+    final folders = _cachedFolders!;
 
     if (!mounted) return;
 
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
-          'Move to Folder',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.note_outlined, color: AppColors.textSecondary),
-              title: const Text(
-                'No Folder',
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              ),
-              onTap: () {
-                setState(() => _selectedFolderId = null);
-                Navigator.of(context).pop();
-              },
-            ),
-            ...folders.map((folder) {
-              return ListTile(
-                leading: Icon(
-                  Icons.folder_outlined,
-                  color: Color(int.parse('FF${folder.color}', radix: 16)),
-                ),
-                title: Text(
-                  folder.name,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                ),
-                onTap: () {
-                  setState(() => _selectedFolderId = folder.id);
-                  Navigator.of(context).pop();
-                },
-              );
-            }),
-          ],
-        ),
+      builder: (context) => _FolderDialog(
+        folders: folders,
+        selectedFolderIdNotifier: _selectedFolderIdNotifier,
       ),
     );
   }
@@ -553,14 +408,14 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           NotesCompanion.insert(
             title: _titleController.text.trim(),
             content: content,
-            folderId: drift.Value(_selectedFolderId),
-            isPinned: drift.Value(_isPinned),
-            isFavorite: drift.Value(_isFavorite),
+            folderId: drift.Value(_selectedFolderIdNotifier.value),
+            isPinned: drift.Value(_isPinnedNotifier.value),
+            isFavorite: drift.Value(_isFavoriteNotifier.value),
           ),
         );
 
         // Add tags
-        for (final tag in _selectedTags) {
+        for (final tag in _selectedTagsNotifier.value) {
           await database.addTagToNote(noteId, tag.id);
         }
       } else {
@@ -569,9 +424,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           widget.note!.copyWith(
             title: _titleController.text.trim(),
             content: content,
-            folderId: drift.Value(_selectedFolderId),
-            isPinned: _isPinned,
-            isFavorite: _isFavorite,
+            folderId: drift.Value(_selectedFolderIdNotifier.value),
+            isPinned: _isPinnedNotifier.value,
+            isFavorite: _isFavoriteNotifier.value,
             updatedAt: drift.Value(DateTime.now()),
           ),
         );
@@ -579,7 +434,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         // Update tags
         await database.setNoteTags(
           widget.note!.id,
-          _selectedTags.map((t) => t.id).toList(),
+          _selectedTagsNotifier.value.map((t) => t.id).toList(),
         );
       }
 
@@ -634,5 +489,273 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         Navigator.of(context).pop();
       }
     }
+  }
+}
+
+// Optimized widgets to prevent unnecessary rebuilds
+class _PinButton extends StatelessWidget {
+  final ValueNotifier<bool> notifier;
+
+  const _PinButton({required this.notifier});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: notifier,
+      builder: (context, isPinned, _) {
+        return IconButton(
+          icon: Icon(
+            isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            color: isPinned ? AppColors.accentBlue : AppColors.textSecondary,
+          ),
+          onPressed: () => notifier.value = !notifier.value,
+        );
+      },
+    );
+  }
+}
+
+class _FavoriteButton extends StatelessWidget {
+  final ValueNotifier<bool> notifier;
+
+  const _FavoriteButton({required this.notifier});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: notifier,
+      builder: (context, isFavorite, _) {
+        return IconButton(
+          icon: Icon(
+            isFavorite ? Icons.favorite : Icons.favorite_outline,
+            color: isFavorite ? AppColors.error : AppColors.textSecondary,
+          ),
+          onPressed: () => notifier.value = !notifier.value,
+        );
+      },
+    );
+  }
+}
+
+class _EditorToolbar extends StatelessWidget {
+  final QuillController controller;
+
+  const _EditorToolbar({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.border, width: 0.5),
+        ),
+      ),
+      child: QuillSimpleToolbar(
+        controller: controller,
+        config: const QuillSimpleToolbarConfig(
+          multiRowsDisplay: false,
+          showAlignmentButtons: true,
+          showBackgroundColorButton: false,
+          showCenterAlignment: true,
+          showCodeBlock: true,
+          showColorButton: true,
+          showDirection: false,
+          showDividers: true,
+          showFontFamily: false,
+          showFontSize: false,
+          showHeaderStyle: true,
+          showIndent: true,
+          showInlineCode: true,
+          showJustifyAlignment: false,
+          showLeftAlignment: true,
+          showLink: true,
+          showListBullets: true,
+          showListCheck: true,
+          showListNumbers: true,
+          showQuote: true,
+          showRedo: true,
+          showRightAlignment: true,
+          showSmallButton: false,
+          showStrikeThrough: true,
+          showUnderLineButton: true,
+          showUndo: true,
+        ),
+      ),
+    );
+  }
+}
+
+class _TagsDialog extends StatefulWidget {
+  final List<Tag> allTags;
+  final ValueNotifier<List<Tag>> selectedTagsNotifier;
+  final AppDatabase database;
+  final VoidCallback onTagsUpdated;
+
+  const _TagsDialog({
+    required this.allTags,
+    required this.selectedTagsNotifier,
+    required this.database,
+    required this.onTagsUpdated,
+  });
+
+  @override
+  State<_TagsDialog> createState() => _TagsDialogState();
+}
+
+class _TagsDialogState extends State<_TagsDialog> {
+  late List<Tag> _allTags;
+
+  @override
+  void initState() {
+    super.initState();
+    _allTags = List.from(widget.allTags);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: const Text(
+        'Manage Tags',
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+      ),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Create new tag
+            TextField(
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(
+                hintText: 'New tag name',
+                hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: AppColors.accentBlue),
+                ),
+              ),
+              onSubmitted: (value) async {
+                if (value.trim().isNotEmpty) {
+                  final newTag = await widget.database.insertTag(
+                    TagsCompanion.insert(name: value.trim()),
+                  );
+                  final tag = await widget.database.getTagById(newTag);
+                  if (tag != null) {
+                    setState(() {
+                      _allTags.add(tag);
+                    });
+                    final updated = List<Tag>.from(widget.selectedTagsNotifier.value);
+                    updated.add(tag);
+                    widget.selectedTagsNotifier.value = updated;
+                    widget.onTagsUpdated();
+                  }
+                }
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Tags list
+            Flexible(
+              child: ValueListenableBuilder<List<Tag>>(
+                valueListenable: widget.selectedTagsNotifier,
+                builder: (context, selectedTags, _) {
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _allTags.length,
+                    itemBuilder: (context, index) {
+                      final tag = _allTags[index];
+                      final isSelected = selectedTags.any((t) => t.id == tag.id);
+
+                      return CheckboxListTile(
+                        value: isSelected,
+                        onChanged: (value) {
+                          final updated = List<Tag>.from(selectedTags);
+                          if (value == true) {
+                            updated.add(tag);
+                          } else {
+                            updated.removeWhere((t) => t.id == tag.id);
+                          }
+                          widget.selectedTagsNotifier.value = updated;
+                        },
+                        title: Text(
+                          tag.name,
+                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                        ),
+                        activeColor: AppColors.accentBlue,
+                        checkColor: AppColors.textPrimary,
+                        side: const BorderSide(color: AppColors.border),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Done', style: TextStyle(color: AppColors.accentBlue)),
+        ),
+      ],
+    );
+  }
+}
+
+class _FolderDialog extends StatelessWidget {
+  final List<NoteFolder> folders;
+  final ValueNotifier<int?> selectedFolderIdNotifier;
+
+  const _FolderDialog({
+    required this.folders,
+    required this.selectedFolderIdNotifier,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: const Text(
+        'Move to Folder',
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 18),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.note_outlined, color: AppColors.textSecondary),
+            title: const Text(
+              'No Folder',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            ),
+            onTap: () {
+              selectedFolderIdNotifier.value = null;
+              Navigator.of(context).pop();
+            },
+          ),
+          ...folders.map((folder) {
+            return ListTile(
+              leading: Icon(
+                Icons.folder_outlined,
+                color: Color(int.parse('FF${folder.color}', radix: 16)),
+              ),
+              title: Text(
+                folder.name,
+                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              ),
+              onTap: () {
+                selectedFolderIdNotifier.value = folder.id;
+                Navigator.of(context).pop();
+              },
+            );
+          }),
+        ],
+      ),
+    );
   }
 }

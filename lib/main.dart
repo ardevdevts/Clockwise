@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Taskie',
+      title: 'ClockWise',
       theme: themeDark,
       routerConfig: appRouter,
       localizationsDelegates: const [
