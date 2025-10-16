@@ -260,6 +260,152 @@ class AppDatabase extends _$AppDatabase {
   // Delete habit log
   Future<int> deleteHabitLogById(int id) => 
       (delete(habitLogs)..where((tbl) => tbl.id.equals(id))).go();
+
+  // Get habit logs within a date range
+  Future<List<HabitLog>> getHabitLogsInRange(int habitId, DateTime startDate, DateTime endDate) {
+    return (select(habitLogs)
+          ..where((tbl) => 
+              tbl.habitId.equals(habitId) &
+              tbl.date.isBiggerOrEqualValue(startDate) & 
+              tbl.date.isSmallerOrEqualValue(endDate))
+          ..orderBy([(t) => OrderingTerm.asc(t.date)]))
+        .get();
+  }
+
+  // Get habit statistics for a specific period
+  Future<Map<String, dynamic>> getHabitStats(int habitId, {int days = 30}) async {
+    final endDate = DateTime.now();
+    final startDate = endDate.subtract(Duration(days: days));
+    final logs = await getHabitLogsInRange(habitId, startDate, endDate);
+    
+    if (logs.isEmpty) {
+      return {
+        'totalLogs': 0,
+        'completionRate': 0.0,
+        'currentStreak': 0,
+        'longestStreak': 0,
+        'averageAmount': 0.0,
+        'totalAmount': 0.0,
+      };
+    }
+
+    final totalLogs = logs.length;
+    final totalAmount = logs.fold<double>(0, (sum, log) => sum + log.amount);
+    final averageAmount = totalAmount / totalLogs;
+    
+    // Calculate streaks
+    final sortedLogs = logs.toList()..sort((a, b) => b.date.compareTo(a.date));
+    int currentStreak = 0;
+    int longestStreak = 0;
+    int tempStreak = 0;
+    
+    DateTime? lastDate;
+    for (var i = 0; i < sortedLogs.length; i++) {
+      final logDate = DateTime(sortedLogs[i].date.year, sortedLogs[i].date.month, sortedLogs[i].date.day);
+      
+      if (lastDate == null) {
+        tempStreak = 1;
+        if (i == 0) {
+          final today = DateTime(endDate.year, endDate.month, endDate.day);
+          final yesterday = today.subtract(const Duration(days: 1));
+          if (logDate.isAtSameMomentAs(today) || logDate.isAtSameMomentAs(yesterday)) {
+            currentStreak = 1;
+          }
+        }
+      } else {
+        final dayDiff = lastDate.difference(logDate).inDays;
+        if (dayDiff == 1) {
+          tempStreak++;
+          if (i == 0) currentStreak = tempStreak;
+        } else {
+          if (tempStreak > longestStreak) longestStreak = tempStreak;
+          tempStreak = 1;
+        }
+      }
+      lastDate = logDate;
+    }
+    if (tempStreak > longestStreak) longestStreak = tempStreak;
+    if (currentStreak > 0 && currentStreak < tempStreak) currentStreak = tempStreak;
+
+    // Calculate completion rate (logs vs expected days)
+    final habit = await getHabitById(habitId);
+    int expectedDays = days;
+    if (habit != null && habit.interval == 'custom' && habit.customDays != null) {
+      // Calculate expected days based on custom schedule
+      final customDays = habit.customDays!.split(',').map(int.parse).toSet();
+      expectedDays = 0;
+      for (var i = 0; i < days; i++) {
+        final date = endDate.subtract(Duration(days: i));
+        if (customDays.contains(date.weekday % 7)) {
+          expectedDays++;
+        }
+      }
+    } else if (habit != null && habit.interval == 'interval' && habit.intervalDays != null) {
+      expectedDays = days ~/ habit.intervalDays!;
+    }
+    
+    final completionRate = expectedDays > 0 ? (totalLogs / expectedDays * 100).clamp(0, 100) : 0.0;
+
+    return {
+      'totalLogs': totalLogs,
+      'completionRate': completionRate,
+      'currentStreak': currentStreak,
+      'longestStreak': longestStreak,
+      'averageAmount': averageAmount,
+      'totalAmount': totalAmount,
+    };
+  }
+
+  // Get daily logs for chart (last N days)
+  Future<Map<DateTime, double>> getDailyHabitLogs(int habitId, {int days = 30}) async {
+    final endDate = DateTime.now();
+    final startDate = endDate.subtract(Duration(days: days - 1));
+    final logs = await getHabitLogsInRange(habitId, startDate, endDate);
+    
+    final Map<DateTime, double> dailyData = {};
+    for (var log in logs) {
+      final dateKey = DateTime(log.date.year, log.date.month, log.date.day);
+      dailyData[dateKey] = log.amount;
+    }
+    
+    return dailyData;
+  }
+
+  // Get weekly aggregated data
+  Future<List<Map<String, dynamic>>> getWeeklyHabitStats(int habitId, {int weeks = 12}) async {
+    final endDate = DateTime.now();
+    final startDate = endDate.subtract(Duration(days: weeks * 7));
+    final logs = await getHabitLogsInRange(habitId, startDate, endDate);
+    
+    final Map<int, List<HabitLog>> weeklyLogs = {};
+    
+    for (var log in logs) {
+      final weekNumber = _getWeekNumber(log.date);
+      weeklyLogs.putIfAbsent(weekNumber, () => []).add(log);
+    }
+    
+    final List<Map<String, dynamic>> weeklyStats = [];
+    for (var i = weeks - 1; i >= 0; i--) {
+      final weekStart = endDate.subtract(Duration(days: i * 7 + endDate.weekday - 1));
+      final weekNumber = _getWeekNumber(weekStart);
+      final logsForWeek = weeklyLogs[weekNumber] ?? [];
+      
+      weeklyStats.add({
+        'weekStart': weekStart,
+        'count': logsForWeek.length,
+        'total': logsForWeek.fold<double>(0, (sum, log) => sum + log.amount),
+        'average': logsForWeek.isEmpty ? 0.0 : logsForWeek.fold<double>(0, (sum, log) => sum + log.amount) / logsForWeek.length,
+      });
+    }
+    
+    return weeklyStats;
+  }
+
+  int _getWeekNumber(DateTime date) {
+    final firstDayOfYear = DateTime(date.year, 1, 1);
+    final daysSinceFirstDay = date.difference(firstDayOfYear).inDays;
+    return (daysSinceFirstDay / 7).floor() + 1;
+  }
   
 }
 

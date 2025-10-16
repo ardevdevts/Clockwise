@@ -42,7 +42,7 @@ class CustomNavbar extends StatelessWidget {
                 }),
               ),
               child: NavigationBar(
-                height: 80,
+                height: 70,
                 selectedIndex: currentIndex,
                 onDestinationSelected: onDestinationSelected,
                 destinations: const [

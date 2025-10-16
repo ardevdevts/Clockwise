@@ -6,6 +6,7 @@ import '../../core/theme/colors.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:intl/intl.dart';
 import '../../core/services/service_providers.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 const List<Color> habitColors = [
   Color(0xFF00ADEF), // BMW Blue
@@ -176,7 +177,7 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
     );
   }
 
-  void _showHabitDialog(BuildContext context, AppDatabase database, {Habit? habit}) {
+  void _showHabitDialog(BuildContext context, AppDatabase database, {Habit? habit}) async {
     final nameController = TextEditingController(text: habit?.name ?? '');
     final descriptionController = TextEditingController(text: habit?.description ?? '');
     String selectedColor = habit?.color ?? habitColors[0].value.toRadixString(16).substring(2);
@@ -192,6 +193,17 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
     }
     
     int intervalDaysValue = habit?.intervalDays ?? 2;
+
+    // Load existing reminders if editing
+    final List<ReminderTimeData> reminderTimes = [];
+    if (habit != null) {
+      final reminderService = ref.read(reminderServiceProvider);
+      final existingReminders = await reminderService.getHabitReminders(habit.id);
+      reminderTimes.addAll(existingReminders.map((r) => ReminderTimeData(
+        id: r.id,
+        time: TimeOfDay.fromDateTime(r.remindAt),
+      )));
+    }
 
     showDialog(
       context: context,
@@ -396,6 +408,129 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
                     ),
                   ],
 
+                  const SizedBox(height: 16),
+                  
+                  // Reminders Section
+                  const Text(
+                    'Reminders',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // List of reminder times
+                  if (reminderTimes.isNotEmpty) ...[
+                    ...reminderTimes.map((reminderData) => Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border, width: 0.5),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.access_time, size: 18, color: AppColors.accentBlue),
+                          const SizedBox(width: 12),
+                          Text(
+                            reminderData.time.format(context),
+                            style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                          ),
+                          const Spacer(),
+                          // Edit button
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.accentBlue),
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                            onPressed: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: reminderData.time,
+                                builder: (context, child) {
+                                  return Theme(
+                                    data: ThemeData.dark().copyWith(
+                                      colorScheme: const ColorScheme.dark(
+                                        primary: AppColors.accentBlue,
+                                        surface: AppColors.elevatedSurface,
+                                      ),
+                                    ),
+                                    child: child!,
+                                  );
+                                },
+                              );
+                              if (time != null) {
+                                setState(() {
+                                  reminderData.time = time;
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          // Delete button
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                            onPressed: () {
+                              setState(() {
+                                reminderTimes.remove(reminderData);
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    )),
+                    const SizedBox(height: 8),
+                  ],
+                  
+                  // Add reminder button
+                  GestureDetector(
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                        builder: (context, child) {
+                          return Theme(
+                            data: ThemeData.dark().copyWith(
+                              colorScheme: const ColorScheme.dark(
+                                primary: AppColors.accentBlue,
+                                surface: AppColors.elevatedSurface,
+                              ),
+                            ),
+                            child: child!,
+                          );
+                        },
+                      );
+                      if (time != null) {
+                        setState(() {
+                          reminderTimes.add(ReminderTimeData(time: time));
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentBlue.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.accentBlue, width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, size: 18, color: AppColors.accentBlue),
+                          SizedBox(width: 8),
+                          Text(
+                            'Add Reminder',
+                            style: TextStyle(color: AppColors.accentBlue, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -420,8 +555,10 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
                             customDaysStr = daysList.join(',');
                           }
 
+                          int habitId;
                           if (habit == null) {
-                            await database.insertHabit(
+                            // Create new habit
+                            habitId = await database.insertHabit(
                               HabitsCompanion.insert(
                                 name: nameController.text.trim(),
                                 description: drift.Value(descriptionController.text.trim().isEmpty
@@ -437,6 +574,8 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
                               ),
                             );
                           } else {
+                            // Update existing habit
+                            habitId = habit.id;
                             await database.updateHabit(
                               habit.copyWith(
                                 name: nameController.text.trim(),
@@ -452,7 +591,60 @@ class _HabitsPageState extends ConsumerState<HabitsPage> {
                                 goalUnit: drift.Value(goalType == 'unit' ? goalUnit : null),
                               ),
                             );
+                            
+                            // Delete old reminders that were removed
+                            final reminderService = ref.read(reminderServiceProvider);
+                            final existingReminders = await reminderService.getHabitReminders(habitId);
+                            for (final existingReminder in existingReminders) {
+                              final stillExists = reminderTimes.any((r) => r.id == existingReminder.id);
+                              if (!stillExists) {
+                                await reminderService.removeReminder(existingReminder.id);
+                              }
+                            }
                           }
+
+                          // Save reminders
+                          final reminderService = ref.read(reminderServiceProvider);
+                          final now = DateTime.now();
+                          
+                          for (final reminderData in reminderTimes) {
+                            var reminderTime = DateTime(
+                              now.year,
+                              now.month,
+                              now.day,
+                              reminderData.time.hour,
+                              reminderData.time.minute,
+                            );
+                            
+                            // If time has passed today, schedule for tomorrow
+                            if (reminderTime.isBefore(now)) {
+                              reminderTime = reminderTime.add(const Duration(days: 1));
+                            }
+                            
+                            if (reminderData.id != null) {
+                              // Update existing reminder
+                              final existingReminder = (await reminderService.getHabitReminders(habitId))
+                                  .firstWhere((r) => r.id == reminderData.id);
+                              await database.updateReminder(
+                                existingReminder.copyWith(remindAt: reminderTime),
+                              );
+                              // Reschedule notification
+                              final updatedHabit = await database.getHabitById(habitId);
+                              if (updatedHabit != null) {
+                                final notificationService = ref.read(notificationServiceProvider);
+                                final notificationId = (habitId * 100000 + reminderData.id!).hashCode.abs();
+                                await notificationService.scheduleHabitReminder(updatedHabit, reminderTime, notificationId);
+                              }
+                            } else {
+                              // Create new reminder
+                              await reminderService.addHabitReminder(
+                                habitId,
+                                reminderTime,
+                                recurring: true,
+                              );
+                            }
+                          }
+                          
                           if (context.mounted) Navigator.pop(context);
                         },
                       ),
@@ -632,15 +824,15 @@ class _HabitCardState extends ConsumerState<_HabitCard> {
 
         return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
+            color: habitColor.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: habitColor.withOpacity(0.4),
+              color: habitColor.withOpacity(0.25),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: habitColor.withOpacity(0.15),
+                color: habitColor.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1314,6 +1506,7 @@ class HabitDetailPage extends ConsumerStatefulWidget {
 
 class _HabitDetailPageState extends ConsumerState<HabitDetailPage> {
   final GlobalKey<_HabitRemindersListState> _remindersListKey = GlobalKey();
+  String _selectedPeriod = '30'; // Default to 30 days
 
   @override
   Widget build(BuildContext context) {
@@ -1323,156 +1516,275 @@ class _HabitDetailPageState extends ConsumerState<HabitDetailPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: CustomScrollView(
+          slivers: [
             // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 4,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: habitColor,
-                      borderRadius: BorderRadius.circular(2),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      widget.habit.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.5,
+                    const SizedBox(width: 12),
+                    Container(
+                      width: 4,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: habitColor,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Contribution Grid
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Activity',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.habit.name,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _ContributionGrid(
-                    habit: widget.habit,
-                    database: database,
-                    habitColor: habitColor,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-            Container(
-              height: 0.5,
-              color: AppColors.border,
-            ),
-            const SizedBox(height: 16),
-
-            // Reminders
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  const Text(
-                    'Reminders',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () async {
-                      final saved = await _showAddHabitReminderDialog(context, ref);
-                      if (saved) {
-                        _remindersListKey.currentState?._loadReminders();
-                      }
-                    },
-                    icon: const Icon(Icons.add, color: AppColors.textSecondary, size: 20),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: _HabitRemindersList(
-                key: _remindersListKey,
-                habitId: widget.habit.id,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-            Container(
-              height: 0.5,
-              color: AppColors.border,
-            ),
-            const SizedBox(height: 16),
-
-            // History
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                'History',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 12),
 
-            Expanded(
-              child: StreamBuilder<List<HabitLog>>(
-                stream: database.watchHabitLogs(widget.habit.id),
-                builder: (context, snapshot) {
-                  final logs = snapshot.data ?? [];
+            // Statistics Section
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Statistics',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        _PeriodSelector(
+                          selected: _selectedPeriod,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedPeriod = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _StatisticsCards(
+                      habit: widget.habit,
+                      database: database,
+                      habitColor: habitColor,
+                      days: int.parse(_selectedPeriod),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
-                  if (logs.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No logs yet',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            // Progress Chart
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Progress Chart',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
                       ),
-                    );
-                  }
+                    ),
+                    const SizedBox(height: 16),
+                    _ProgressChart(
+                      habit: widget.habit,
+                      database: database,
+                      habitColor: habitColor,
+                      days: int.parse(_selectedPeriod),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: logs.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 1),
-                    itemBuilder: (context, index) {
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            // Weekly Trend Chart
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Weekly Trend',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _WeeklyTrendChart(
+                      habit: widget.habit,
+                      database: database,
+                      habitColor: habitColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+            // Contribution Grid
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Activity',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _ContributionGrid(
+                      habit: widget.habit,
+                      database: database,
+                      habitColor: habitColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 24),
+            ),
+            SliverToBoxAdapter(
+              child: Container(
+                height: 0.5,
+                color: AppColors.border,
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            // Reminders
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Reminders',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () async {
+                        final saved = await _showAddHabitReminderDialog(context, ref);
+                        if (saved) {
+                          _remindersListKey.currentState?._loadReminders();
+                        }
+                      },
+                      icon: const Icon(Icons.add, color: AppColors.textSecondary, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: _HabitRemindersList(
+                  key: _remindersListKey,
+                  habitId: widget.habit.id,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+            SliverToBoxAdapter(
+              child: Container(
+                height: 0.5,
+                color: AppColors.border,
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            // History
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: const Text(
+                  'History',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            StreamBuilder<List<HabitLog>>(
+              stream: database.watchHabitLogs(widget.habit.id),
+              builder: (context, snapshot) {
+                final logs = snapshot.data ?? [];
+
+                if (logs.isEmpty) {
+                  return const SliverToBoxAdapter(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Text(
+                          'No logs yet',
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
                       final log = logs[index];
                       final completionPercent = widget.habit.goalType == 'unit' && widget.habit.goalValue != null
                           ? (log.amount / widget.habit.goalValue!) * 100
@@ -1484,7 +1796,7 @@ class _HabitDetailPageState extends ConsumerState<HabitDetailPage> {
                             bottom: BorderSide(color: AppColors.border, width: 0.5),
                           ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                         child: Row(
                           children: [
                             Container(
@@ -1518,7 +1830,7 @@ class _HabitDetailPageState extends ConsumerState<HabitDetailPage> {
                                   const SizedBox(width: 8),
                                   Text(
                                     '${completionPercent.toStringAsFixed(0)}%',
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: AppColors.textMuted,
                                       fontSize: 13,
                                     ),
@@ -1531,9 +1843,10 @@ class _HabitDetailPageState extends ConsumerState<HabitDetailPage> {
                         ),
                       );
                     },
-                  );
-                },
-              ),
+                    childCount: logs.length,
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -2295,6 +2608,539 @@ class _DaySelector extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+}
+
+
+// Period Selector Widget
+class _PeriodSelector extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  const _PeriodSelector({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: ['7', '30', '90'].map((period) {
+          final isSelected = period == selected;
+          return GestureDetector(
+            onTap: () => onChanged(period),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.accentBlue.withOpacity(0.15) : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '$period days',
+                style: TextStyle(
+                  color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// Statistics Cards Widget
+class _StatisticsCards extends StatelessWidget {
+  final Habit habit;
+  final AppDatabase database;
+  final Color habitColor;
+  final int days;
+
+  const _StatisticsCards({
+    required this.habit,
+    required this.database,
+    required this.habitColor,
+    required this.days,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: database.getHabitStats(habit.id, days: days),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+            ),
+          );
+        }
+
+        final stats = snapshot.data!;
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    title: 'Completion',
+                    value: '${stats['completionRate'].toStringAsFixed(0)}%',
+                    icon: Icons.trending_up,
+                    color: habitColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    title: 'Total Logs',
+                    value: '${stats['totalLogs']}',
+                    icon: Icons.calendar_month,
+                    color: habitColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    title: 'Current Streak',
+                    value: '${stats['currentStreak']} days',
+                    icon: Icons.local_fire_department,
+                    color: habitColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    title: 'Longest Streak',
+                    value: '${stats['longestStreak']} days',
+                    icon: Icons.emoji_events,
+                    color: habitColor,
+                  ),
+                ),
+              ],
+            ),
+            if (habit.goalType == 'unit') ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(
+                      title: 'Average',
+                      value: '${stats['averageAmount'].toStringAsFixed(1)} ${habit.goalUnit}',
+                      icon: Icons.analytics,
+                      color: habitColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StatCard(
+                      title: 'Total',
+                      value: '${stats['totalAmount'].toStringAsFixed(0)} ${habit.goalUnit}',
+                      icon: Icons.functions,
+                      color: habitColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Individual Stat Card
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color.withOpacity(0.7)),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Progress Chart Widget
+class _ProgressChart extends StatelessWidget {
+  final Habit habit;
+  final AppDatabase database;
+  final Color habitColor;
+  final int days;
+
+  const _ProgressChart({
+    required this.habit,
+    required this.database,
+    required this.habitColor,
+    required this.days,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<DateTime, double>>(
+      future: database.getDailyHabitLogs(habit.id, days: days),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 200,
+            child: Center(
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+            ),
+          );
+        }
+
+        final dailyLogs = snapshot.data!;
+        if (dailyLogs.isEmpty) {
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border, width: 0.5),
+            ),
+            child: const Center(
+              child: Text(
+                'No data to display',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              ),
+            ),
+          );
+        }
+
+        final now = DateTime.now();
+        final startDate = now.subtract(Duration(days: days - 1));
+        final List<FlSpot> spots = [];
+        
+        for (var i = 0; i < days; i++) {
+          final date = DateTime(startDate.year, startDate.month, startDate.day).add(Duration(days: i));
+          final value = dailyLogs[date] ?? 0.0;
+          spots.add(FlSpot(i.toDouble(), value));
+        }
+
+        final maxY = spots.isEmpty ? 10.0 : spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+        final adjustedMaxY = maxY == 0 ? 10.0 : maxY * 1.2;
+
+        return Container(
+          height: 200,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border, width: 0.5),
+          ),
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: adjustedMaxY / 4,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 0.5,
+                  );
+                },
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 35,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    interval: days > 30 ? (days / 6).floorToDouble() : 7,
+                    getTitlesWidget: (value, meta) {
+                      final date = startDate.add(Duration(days: value.toInt()));
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          DateFormat('M/d').format(date),
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: 0,
+              maxX: (days - 1).toDouble(),
+              minY: 0,
+              maxY: adjustedMaxY,
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: true,
+                  color: habitColor,
+                  barWidth: 2.5,
+                  isStrokeCapRound: true,
+                  dotData: FlDotData(
+                    show: days <= 30,
+                    getDotPainter: (spot, percent, barData, index) {
+                      return FlDotCirclePainter(
+                        radius: 3,
+                        color: habitColor,
+                        strokeWidth: 1,
+                        strokeColor: AppColors.surface,
+                      );
+                    },
+                  ),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: habitColor.withOpacity(0.1),
+                  ),
+                ),
+              ],
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (spot) => AppColors.elevatedSurface,
+                  getTooltipItems: (touchedSpots) {
+                    return touchedSpots.map((spot) {
+                      final date = startDate.add(Duration(days: spot.x.toInt()));
+                      return LineTooltipItem(
+                        '${DateFormat('MMM d').format(date)}\n${spot.y.toStringAsFixed(1)} ${habit.goalUnit ?? ''}',
+                        const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      );
+                    }).toList();
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Weekly Trend Chart Widget
+class _WeeklyTrendChart extends StatelessWidget {
+  final Habit habit;
+  final AppDatabase database;
+  final Color habitColor;
+
+  const _WeeklyTrendChart({
+    required this.habit,
+    required this.database,
+    required this.habitColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: database.getWeeklyHabitStats(habit.id, weeks: 12),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 200,
+            child: Center(
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+            ),
+          );
+        }
+
+        final weeklyStats = snapshot.data!;
+        if (weeklyStats.isEmpty) {
+          return Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border, width: 0.5),
+            ),
+            child: const Center(
+              child: Text(
+                'No data to display',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              ),
+            ),
+          );
+        }
+
+        final maxCount = weeklyStats.isEmpty ? 10.0 : weeklyStats.map((s) => s['count'] as int).reduce((a, b) => a > b ? a : b).toDouble();
+        final adjustedMaxY = maxCount == 0 ? 10.0 : maxCount * 1.2;
+
+        return Container(
+          height: 200,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border, width: 0.5),
+          ),
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: adjustedMaxY,
+              minY: 0,
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: adjustedMaxY / 4,
+                getDrawingHorizontalLine: (value) {
+                  return FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 0.5,
+                  );
+                },
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 35,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 10,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                    getTitlesWidget: (value, meta) {
+                      if (value.toInt() >= weeklyStats.length) return const Text('');
+                      final weekStart = weeklyStats[value.toInt()]['weekStart'] as DateTime;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          DateFormat('M/d').format(weekStart),
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              barGroups: weeklyStats.asMap().entries.map((entry) {
+                final index = entry.key;
+                final stat = entry.value;
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: (stat['count'] as int).toDouble(),
+                      color: habitColor,
+                      width: 12,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                  ],
+                );
+              }).toList(),
+              barTouchData: BarTouchData(
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (group) => AppColors.elevatedSurface,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final stat = weeklyStats[groupIndex];
+                    final weekStart = stat['weekStart'] as DateTime;
+                    final count = stat['count'] as int;
+                    return BarTooltipItem(
+                      'Week of ${DateFormat('MMM d').format(weekStart)}\n$count logs',
+                      const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
