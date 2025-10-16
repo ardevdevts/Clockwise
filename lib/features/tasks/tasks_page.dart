@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'dart:io';
 
 class TasksPage extends ConsumerStatefulWidget {
@@ -68,7 +69,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         ),
                         // Sort button
                         PopupMenuButton<String>(
-                          icon: const Icon(Icons.sort, color: AppColors.textSecondary, size: 24),
+                          icon: HugeIcon(icon: HugeIcons.strokeRoundedSorting01, color: AppColors.textSecondary, size: 24),
                           color: AppColors.elevatedSurface,
                           elevation: 8,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -80,7 +81,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'created',
                               child: Row(
                                 children: [
-                                  Icon(Icons.access_time, size: 18, color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textSecondary),
                                   const SizedBox(width: 12),
                                   Text('Recent', style: TextStyle(color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textPrimary)),
                                 ],
@@ -90,7 +91,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'name',
                               child: Row(
                                 children: [
-                                  Icon(Icons.sort_by_alpha, size: 18, color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(icon: HugeIcons.strokeRoundedSortingAZ01, size: 18, color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textSecondary),
                                   const SizedBox(width: 12),
                                   Text('Name', style: TextStyle(color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textPrimary)),
                                 ],
@@ -100,7 +101,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'progress',
                               child: Row(
                                 children: [
-                                  Icon(Icons.trending_up, size: 18, color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01, size: 18, color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textSecondary),
                                   const SizedBox(width: 12),
                                   Text('Progress', style: TextStyle(color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textPrimary)),
                                 ],
@@ -116,8 +117,8 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.folder_open_outlined,
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedFolder01,
                             size: 64,
                             color: AppColors.gray500,
                           ),
@@ -177,7 +178,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         ),
                         // Sort button
                         PopupMenuButton<String>(
-                          icon: const Icon(Icons.sort, color: AppColors.textSecondary, size: 24),
+                          icon: HugeIcon(icon: HugeIcons.strokeRoundedSorting01, color: AppColors.textSecondary, size: 24),
                           color: AppColors.elevatedSurface,
                           elevation: 8,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -189,7 +190,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'created',
                               child: Row(
                                 children: [
-                                  Icon(Icons.access_time, size: 18, color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textSecondary),
                                   const SizedBox(width: 12),
                                   Text('Recent', style: TextStyle(color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textPrimary)),
                                 ],
@@ -199,7 +200,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'name',
                               child: Row(
                                 children: [
-                                  Icon(Icons.sort_by_alpha, size: 18, color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(icon: HugeIcons.strokeRoundedSortingAZ01, size: 18, color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textSecondary),
                                   const SizedBox(width: 12),
                                   Text('Name', style: TextStyle(color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textPrimary)),
                                 ],
@@ -209,7 +210,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'progress',
                               child: Row(
                                 children: [
-                                  Icon(Icons.trending_up, size: 18, color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01, size: 18, color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textSecondary),
                                   const SizedBox(width: 12),
                                   Text('Progress', style: TextStyle(color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textPrimary)),
                                 ],
@@ -258,7 +259,7 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showProjectDialog(context, database),
         backgroundColor: AppColors.accentBlue,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: Colors.white),
       ),
     );
   }
@@ -473,7 +474,7 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                         ),
                       ),
                       child: isSelected
-                          ? const Icon(Icons.check, color: Colors.white, size: 20)
+                          ? HugeIcon(icon: HugeIcons.strokeRoundedTick02, color: Colors.white, size: 20)
                           : null,
                     ),
                   );
@@ -590,7 +591,7 @@ class _ProjectCard extends StatelessWidget {
               color: AppColors.error,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+            child: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: Colors.white, size: 28),
           ),
           confirmDismiss: (direction) async {
             return await showDialog(
@@ -712,7 +713,7 @@ class _ProjectCard extends StatelessWidget {
                           
                           // More menu
                           PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert, color: AppColors.textMuted, size: 22),
+                            icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreVertical, color: AppColors.textMuted, size: 22),
                             color: AppColors.elevatedSurface,
                             elevation: 8,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -730,7 +731,7 @@ class _ProjectCard extends StatelessWidget {
                                 height: 44,
                                 child: Row(
                                   children: [
-                                    Icon(Icons.edit_outlined, size: 18, color: AppColors.textPrimary),
+                                    HugeIcon(icon: HugeIcons.strokeRoundedEdit02, size: 18, color: AppColors.textPrimary),
                                     SizedBox(width: 12),
                                     Text('Edit', style: TextStyle(fontSize: 15)),
                                   ],
@@ -741,7 +742,7 @@ class _ProjectCard extends StatelessWidget {
                                 height: 44,
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                    HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
                                     SizedBox(width: 12),
                                     Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 15)),
                                   ],
@@ -797,7 +798,7 @@ class _ProjectCard extends StatelessWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(Icons.schedule, size: 14, color: AppColors.textMuted),
+                          HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 14, color: AppColors.textMuted),
                           const SizedBox(width: 4),
                           Text(
                             _formatDate(project.createdAt),
@@ -907,7 +908,7 @@ class _ProjectItem extends StatelessWidget {
                   ),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_horiz, color: AppColors.textMuted, size: 20),
+                  icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textMuted, size: 20),
                   color: AppColors.elevatedSurface,
                   elevation: 8,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -923,7 +924,7 @@ class _ProjectItem extends StatelessWidget {
                       height: 40,
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined, size: 18, color: AppColors.textPrimary),
+                          HugeIcon(icon: HugeIcons.strokeRoundedEdit02, size: 18, color: AppColors.textPrimary),
                           const SizedBox(width: 12),
                           Text('Edit', style: TextStyle(fontSize: 15)),
                         ],
@@ -934,7 +935,7 @@ class _ProjectItem extends StatelessWidget {
                       height: 40,
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                          HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
                           const SizedBox(width: 12),
                           Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 15)),
                         ],
@@ -974,7 +975,7 @@ class ProjectTasksPage extends ConsumerWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: AppColors.textPrimary, size: 20),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -992,7 +993,7 @@ class ProjectTasksPage extends ConsumerWidget {
                   ),
                   IconButton(
                     onPressed: () => _showTaskDialog(context, database, project.id),
-                    icon: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
+                    icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.textPrimary, size: 28),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -1025,7 +1026,7 @@ class ProjectTasksPage extends ConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.check_circle_outline, size: 48, color: AppColors.gray500),
+                          HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, size: 48, color: AppColors.gray500),
                           const SizedBox(height: 16),
                           Text(
                             'No tasks',
@@ -1194,17 +1195,17 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                         children: [
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
+                            icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: AppColors.textPrimary, size: 20),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
                           const Spacer(),
                           IconButton(
                             onPressed: () => _showEditTaskDialog(context, database),
-                            icon: const Icon(Icons.edit_outlined, color: AppColors.accentBlue, size: 22),
+                            icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: AppColors.accentBlue, size: 22),
                           ),
                           PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert, color: AppColors.textSecondary, size: 22),
+                            icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreVertical, color: AppColors.textSecondary, size: 22),
                             color: AppColors.elevatedSurface,
                             onSelected: (value) {
                               if (value == 'delete') {
@@ -1216,7 +1217,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                    HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: AppColors.error, size: 20),
                                     SizedBox(width: 12),
                                     Text('Delete Task', style: TextStyle(color: AppColors.error)),
                                   ],
@@ -1245,7 +1246,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                                 color: task.completed ? AppColors.accentBlue : Colors.transparent,
                               ),
                               child: task.completed
-                                  ? const Icon(Icons.check, size: 18, color: AppColors.background)
+                                  ? HugeIcon(icon: HugeIcons.strokeRoundedTick02, size: 18, color: AppColors.background)
                                   : null,
                             ),
                           ),
@@ -1885,7 +1886,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 18, color: AppColors.textSecondary),
+                        HugeIcon(icon: HugeIcons.strokeRoundedCalendar03, size: 18, color: AppColors.textSecondary),
                         const SizedBox(width: 12),
                         Text(
                           DateFormat('MMM dd, yyyy').format(selectedDate),
@@ -1929,7 +1930,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.access_time, size: 18, color: AppColors.textSecondary),
+                        HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: AppColors.textSecondary),
                         const SizedBox(width: 12),
                         Text(
                           selectedTime.format(context),
@@ -2023,7 +2024,7 @@ class _TaskItem extends StatelessWidget {
                       color: task.completed ? AppColors.accentBlue : Colors.transparent,
                     ),
                     child: task.completed
-                        ? const Icon(Icons.check, size: 12, color: AppColors.background)
+                        ? HugeIcon(icon: HugeIcons.strokeRoundedTick02, size: 12, color: AppColors.background)
                         : null,
                   ),
                 ),
@@ -2060,7 +2061,7 @@ class _TaskItem extends StatelessWidget {
                 const SizedBox(width: 8),
                 _priorityBadge(task.priority),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 18),
+                HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: AppColors.textMuted, size: 18),
               ],
             ),
           ),
@@ -2164,7 +2165,7 @@ class _PrioritySelector extends StatelessWidget {
           }
         },
         underline: const SizedBox.shrink(),
-        icon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+        icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, color: AppColors.textSecondary),
         dropdownColor: AppColors.elevatedSurface,
         isExpanded: true,
         items: Priority.values.map((priority) {
@@ -2350,7 +2351,7 @@ class _SectionHeader extends StatelessWidget {
           if (onEdit != null)
             IconButton(
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.accentBlue),
+              icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit02, size: 20, color: AppColors.accentBlue),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -2358,7 +2359,7 @@ class _SectionHeader extends StatelessWidget {
             if (onEdit != null) const SizedBox(width: 12),
             IconButton(
               onPressed: onAdd,
-              icon: const Icon(Icons.add_circle_outline, size: 22, color: AppColors.accentBlue),
+              icon: HugeIcon(icon: HugeIcons.strokeRoundedAddCircle, size: 22, color: AppColors.accentBlue),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -2452,7 +2453,7 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
                         color: AppColors.accentTeal.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.access_time, size: 18, color: AppColors.accentTeal),
+                      child: HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: AppColors.accentTeal),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -2478,7 +2479,7 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                      icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
                       constraints: const BoxConstraints(),
                       padding: EdgeInsets.zero,
                       onPressed: () async {
@@ -2597,7 +2598,7 @@ class _LinksSection extends ConsumerWidget {
                                   color: AppColors.accentBlue.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.open_in_new, size: 16, color: AppColors.accentBlue),
+                                child: HugeIcon(icon: HugeIcons.strokeRoundedLinkSquare02, size: 16, color: AppColors.accentBlue),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -2630,7 +2631,7 @@ class _LinksSection extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                                 onPressed: () async {
@@ -2952,7 +2953,7 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
         title: Text('${_currentIndex + 1} / ${widget.images.length}'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_outline),
+            icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: Colors.white),
             onPressed: () async {
               final confirmed = await showDialog<bool>(
                 context: context,

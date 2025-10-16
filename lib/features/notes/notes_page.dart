@@ -1,11 +1,21 @@
 import 'package:drift/drift.dart' as drift;
+import 'package:financialtracker/core/theme/colors.dart';
+import 'package:financialtracker/database/crud.dart';
+import 'package:financialtracker/features/notes/note_editor_page.dart';
+import 'package:financialtracker/features/notes/notes_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hugeicons/hugeicons.dart';
+
 import '../../database/database_provider.dart';
-import '../../database/crud.dart';
-import '../../core/theme/colors.dart';
-import 'note_editor_page.dart';
-import 'notes_providers.dart';
+
+// A data class to hold a note and its associated tags, preventing N+1 queries in the UI.
+class NoteWithTags {
+  final Note note;
+  final List<Tag> tags;
+
+  NoteWithTags({required this.note, required this.tags});
+}
 
 class NotesPage extends ConsumerStatefulWidget {
   const NotesPage({super.key});
@@ -70,7 +80,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _createNewNote(context, selectedFolder),
         backgroundColor: AppColors.accentBlue,
-        child: const Icon(Icons.add, color: AppColors.textPrimary),
+        child: const HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.textPrimary),
       ),
     );
   }
@@ -108,7 +118,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                 ),
                 IconButton(
                   onPressed: _toggleSidebar,
-                  icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                  icon: HugeIcon(icon: HugeIcons.strokeRoundedCancel01, color: AppColors.textSecondary, size: 20),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -118,7 +128,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
 
           // Quick filters
           _buildSidebarItem(
-            icon: Icons.note_outlined,
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedNote02, size: 20, color: AppColors.textSecondary),
             label: 'All Notes',
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state = null;
@@ -126,7 +136,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             },
           ),
           _buildSidebarItem(
-            icon: Icons.push_pin_outlined,
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedPin, size: 20, color: AppColors.textSecondary),
             label: 'Pinned',
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state = -1; // Special: pinned
@@ -134,7 +144,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             },
           ),
           _buildSidebarItem(
-            icon: Icons.favorite_outline,
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedChart01, size: 20, color: AppColors.textSecondary),
             label: 'Favorites',
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state = -2; // Special: favorites
@@ -177,7 +187,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             padding: const EdgeInsets.all(12),
             child: TextButton.icon(
               onPressed: () => _showAddFolderDialog(context, database),
-              icon: const Icon(Icons.add, size: 16, color: AppColors.accentBlue),
+              icon: const HugeIcon(icon: HugeIcons.strokeRoundedHdd, size: 16, color: AppColors.accentBlue),
               label: const Text(
                 'New Folder',
                 style: TextStyle(color: AppColors.accentBlue, fontSize: 13),
@@ -190,7 +200,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   }
 
   Widget _buildSidebarItem({
-    required IconData icon,
+    required Widget icon,
     required String label,
     required VoidCallback onTap,
   }) {
@@ -203,7 +213,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.textSecondary),
+            icon,
             const SizedBox(width: 12),
             Text(
               label,
@@ -233,8 +243,8 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         color: isSelected ? AppColors.elevatedSurface : Colors.transparent,
         child: Row(
           children: [
-            Icon(
-              Icons.folder_outlined,
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedFolder01,
               size: 20,
               color: Color(int.parse('FF${folder.color}', radix: 16)),
             ),
@@ -267,7 +277,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               // Menu button to toggle sidebar
               IconButton(
                 onPressed: _toggleSidebar,
-                icon: const Icon(Icons.menu, color: AppColors.textPrimary),
+                icon: HugeIcon(icon: HugeIcons.strokeRoundedMenu01, color: AppColors.textPrimary),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -282,7 +292,6 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                   decoration: InputDecoration(
                     hintText: 'Search notes...',
                     hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search, color: AppColors.textMuted, size: 20),
                     filled: true,
                     fillColor: AppColors.surface,
                     border: OutlineInputBorder(
@@ -314,65 +323,96 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   }
 
   Widget _buildNotesList(AppDatabase database, int? selectedFolder, int? selectedTag) {
-    if (_searchQuery.isNotEmpty) {
-      return FutureBuilder<List<Note>>(
-        future: database.searchNotes(_searchQuery),
+    final source = _getNotesSource(database, selectedFolder, selectedTag, _searchQuery);
+    return _NotesGridDataLoader(
+      source: source,
+      database: database,
+    );
+  }
+
+  // Helper to determine the data source (Future or Stream)
+  Object _getNotesSource(AppDatabase database, int? folder, int? tag, String query) {
+    if (query.isNotEmpty) {
+      return database.searchNotes(query);
+    }
+    if (tag != null) {
+      return database.getNotesByTag(tag);
+    }
+    if (folder == -1) { // Pinned
+      return database.getPinnedNotes();
+    }
+    if (folder == -2) { // Favorites
+      return database.getFavoriteNotes();
+    }
+    return database.watchNotesByFolder(folder);
+  }
+
+  // This widget takes a Future<List<Note>> or Stream<List<Note>>,
+  // fetches the tags for them, and builds the final grid.
+  Widget _NotesGridDataLoader({required Object source, required AppDatabase database}) {
+    if (source is Stream<List<Note>>) {
+      return StreamBuilder<List<Note>>(
+        stream: source,
         builder: (context, snapshot) {
           final notes = snapshot.data ?? [];
-          return _buildNotesGrid(notes, database);
+          return _buildGridWithFetchedTags(notes, database);
+        },
+      );
+    } else if (source is Future<List<Note>>) {
+      return FutureBuilder<List<Note>>(
+        future: source,
+        builder: (context, snapshot) {
+          final notes = snapshot.data ?? [];
+          // Avoid fetching tags while the future is still running
+          if (snapshot.connectionState != ConnectionState.done && notes.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return _buildGridWithFetchedTags(notes, database);
         },
       );
     }
+    return Container(); // Should not happen
+  }
 
-    if (selectedTag != null) {
-      return FutureBuilder<List<Note>>(
-        future: database.getNotesByTag(selectedTag),
-        builder: (context, snapshot) {
-          final notes = snapshot.data ?? [];
-          return _buildNotesGrid(notes, database);
-        },
-      );
+  // Helper widget to fetch tags in parallel and build the grid
+  Widget _buildGridWithFetchedTags(List<Note> notes, AppDatabase database) {
+    if (notes.isEmpty) {
+      return _buildNotesGrid([]); // Return the empty state grid
     }
 
-    if (selectedFolder == -1) {
-      // Pinned notes
-      return FutureBuilder<List<Note>>(
-        future: database.getPinnedNotes(),
-        builder: (context, snapshot) {
-          final notes = snapshot.data ?? [];
-          return _buildNotesGrid(notes, database);
-        },
-      );
-    }
+    // Fetch all tags for the list of notes in parallel.
+    // This is still N queries, but Future.wait runs them concurrently,
+    // which is a marginal improvement over sequential fetches in a list.
+    final tagsFuture = Future.wait(
+      notes.map((note) => database.getTagsForNote(note.id)),
+    );
 
-    if (selectedFolder == -2) {
-      // Favorite notes
-      return FutureBuilder<List<Note>>(
-        future: database.getFavoriteNotes(),
-        builder: (context, snapshot) {
-          final notes = snapshot.data ?? [];
-          return _buildNotesGrid(notes, database);
-        },
-      );
-    }
+    return FutureBuilder<List<List<Tag>>>(
+      future: tagsFuture,
+      builder: (context, tagsSnapshot) {
+        if (!tagsSnapshot.hasData) {
+          // Show a loading state or the grid with no tags while they load
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return StreamBuilder<List<Note>>(
-      stream: database.watchNotesByFolder(selectedFolder),
-      builder: (context, snapshot) {
-        final notes = snapshot.data ?? [];
-        return _buildNotesGrid(notes, database);
+        final allTags = tagsSnapshot.data!;
+        final notesWithTags = List.generate(notes.length, (i) {
+          return NoteWithTags(note: notes[i], tags: allTags[i]);
+        });
+
+        return _buildNotesGrid(notesWithTags);
       },
     );
   }
 
-  Widget _buildNotesGrid(List<Note> notes, AppDatabase database) {
-    if (notes.isEmpty) {
+  Widget _buildNotesGrid(List<NoteWithTags> notesWithTags) {
+    if (notesWithTags.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.note_outlined,
+            const HugeIcon(
+              icon: HugeIcons.strokeRoundedNote02,
               size: 64,
               color: AppColors.gray500,
             ),
@@ -406,15 +446,18 @@ class _NotesPageState extends ConsumerState<NotesPage> {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemCount: notes.length,
+      itemCount: notesWithTags.length,
       itemBuilder: (context, index) {
-        final note = notes[index];
-        return _buildNoteCard(note, database);
+        final noteWithTags = notesWithTags[index];
+        return _buildNoteCard(noteWithTags);
       },
     );
   }
 
-  Widget _buildNoteCard(Note note, AppDatabase database) {
+  Widget _buildNoteCard(NoteWithTags noteWithTags) {
+    final note = noteWithTags.note;
+    final tags = noteWithTags.tags;
+
     return InkWell(
       onTap: () => _editNote(context, note),
       child: Container(
@@ -448,16 +491,16 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (note.isPinned)
-                        const Icon(
-                          Icons.push_pin,
+                        const HugeIcon(
+                          icon: HugeIcons.strokeRoundedPin,
                           size: 16,
                           color: AppColors.accentBlue,
                         ),
                       if (note.isFavorite)
                         const Padding(
                           padding: EdgeInsets.only(left: 4),
-                          child: Icon(
-                            Icons.favorite,
+                          child: HugeIcon(
+                            icon: HugeIcons.strokeRoundedChart01,
                             size: 16,
                             color: AppColors.error,
                           ),
@@ -486,38 +529,34 @@ class _NotesPageState extends ConsumerState<NotesPage> {
             ),
 
             // Tags
-            FutureBuilder<List<Tag>>(
-              future: database.getTagsForNote(note.id),
-              builder: (context, snapshot) {
-                final tags = snapshot.data ?? [];
-                if (tags.isEmpty) return const SizedBox(height: 12);
-
-                return Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: tags.take(3).map((tag) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Color(int.parse('FF${tag.color}', radix: 16)).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
+            if (tags.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: tags.take(3).map((tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Color(int.parse('FF${tag.color}', radix: 16))
+                            .withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        tag.name,
+                        style: TextStyle(
+                          color: Color(int.parse('FF${tag.color}', radix: 16)),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
                         ),
-                        child: Text(
-                          tag.name,
-                          style: TextStyle(
-                            color: Color(int.parse('FF${tag.color}', radix: 16)),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                );
-              },
-            ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              )
+            else
+              const SizedBox(height: 12),
 
             // Footer
             Container(
@@ -544,7 +583,11 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   String _getPlainTextPreview(String jsonContent) {
     // Simple extraction - in reality, you'd parse the Quill JSON
     try {
-      return jsonContent.replaceAll(RegExp(r'[{}\[\]"]'), '').substring(0, 200);
+      final text = jsonContent.replaceAll(RegExp(r'[{}\[\]"]'), '');
+      if (text.length > 200) {
+        return '${text.substring(0, 200)}...';
+      }
+      return text;
     } catch (e) {
       return '';
     }

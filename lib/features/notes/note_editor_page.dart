@@ -313,6 +313,21 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       
       // Convert HTML to Delta using flutter_quill_delta_from_html
       final delta = HtmlToDelta().convert(html);
+
+      // Prevent crash if conversion results in an empty or invalid delta.
+      // A delta is considered contentless if its plain text version is empty.
+      if (delta.toString().trim().isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pasted content is empty or could not be converted'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+      
       
       // Get current selection
       final selection = _controller.selection;

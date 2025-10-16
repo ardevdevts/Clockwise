@@ -1,6 +1,6 @@
 import 'dart:ui';
-import 'package:financialtracker/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 class CustomNavbar extends StatelessWidget {
   final Widget navigationShell;
@@ -34,7 +34,7 @@ class CustomNavbar extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            color: themeDark.colorScheme.surface.withOpacity(0.8),
+            color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
             child: Stack(
               children: [
                 Row(
@@ -81,15 +81,16 @@ class CustomNavbar extends StatelessWidget {
     required bool isSelected,
     required double itemWidth,
   }) {
+    // Using Material Icons as fallback since HugeIcons requires specific implementation
     final icons = [
-      Icons.task_outlined,
-      Icons.monitor_heart_outlined,
-      Icons.note_outlined,
+      HugeIcons.strokeRoundedHome01,
+      HugeIcons.strokeRoundedHeartCheck,
+      HugeIcons.strokeRoundedUser,
     ];
     final selectedIcons = [
-      Icons.task,
-      Icons.monitor_heart,
-      Icons.note,
+      HugeIcons.strokeRoundedHome01,
+      HugeIcons.strokeRoundedHeartCheck,
+      HugeIcons.strokeRoundedUser,
     ];
     final labels = [
       'Tasks',
@@ -114,8 +115,8 @@ class CustomNavbar extends StatelessWidget {
               curve: Curves.easeInOut,
               transform: Matrix4.identity()
                 ..scale(isSelected ? 1.1 : 1.0),
-              child: Icon(
-                isSelected ? selectedIcons[index] : icons[index],
+              child: HugeIcon(
+                icon: isSelected ? selectedIcons[index] : icons[index],
                 size: 26,
                 color: isSelected 
                     ? const Color(0xFF2196F3) 
