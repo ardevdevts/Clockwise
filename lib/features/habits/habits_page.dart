@@ -26,114 +26,151 @@ class HabitsPage extends ConsumerStatefulWidget {
 }
 
 class _HabitsPageState extends ConsumerState<HabitsPage> {
-  DateTime selectedDate = DateTime.now();
-
   @override
   Widget build(BuildContext context) {
     final database = ref.watch(databaseProvider);
+    final selectedDate = DateTime.now();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: StreamBuilder<List<Habit>>(
+          stream: database.watchActiveHabits(),
+          builder: (context, snapshot) {
+            // Show loading only if waiting AND no data yet
+            final isLoading = !snapshot.hasData && 
+                             snapshot.connectionState == ConnectionState.waiting;
+            
+            if (isLoading) {
+              return const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.textMuted,
+                ),
+              );
+            }
+
+            final habits = snapshot.data ?? [];
+
+            if (habits.isEmpty) {
+              return Column(
                 children: [
-                  const Text(
-                    'Habits',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.5,
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Habits',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => _showHabitDialog(context, database),
+                          icon: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => _showHabitDialog(context, database),
-                    icon: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-
-            // Date Selector
-            _DateSelector(
-              selectedDate: selectedDate,
-              onDateChanged: (date) => setState(() => selectedDate = date),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Habits List
-            Expanded(
-              child: StreamBuilder<List<Habit>>(
-                stream: database.watchActiveHabits(),
-                builder: (context, snapshot) {
-                  // Show loading only if waiting AND no data yet
-                  final isLoading = !snapshot.hasData && 
-                                   snapshot.connectionState == ConnectionState.waiting;
-                  
-                  if (isLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.textMuted,
-                      ),
-                    );
-                  }
-
-                  final habits = snapshot.data ?? [];
-
-                  if (habits.isEmpty) {
-                    return Center(
+                  Expanded(
+                    child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             Icons.track_changes_outlined,
-                            size: 48,
+                            size: 64,
                             color: AppColors.gray500,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                           Text(
-                            'No habits',
+                            'No habits yet',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap + to start building better routines!',
                             style: TextStyle(
                               color: AppColors.textSecondary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }
+                    ),
+                  ),
+                ],
+              );
+            }
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    itemCount: habits.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      return _HabitCard(
-                        habit: habits[index],
-                        selectedDate: selectedDate,
-                        database: database,
-                        onTap: () => _showHabitDetail(context, habits[index]),
-                        onEdit: () => _showHabitDialog(context, database, habit: habits[index]),
-                        onDelete: () => _deleteHabit(context, database, habits[index]),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+            return CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  backgroundColor: AppColors.background,
+                  floating: true,
+                  snap: true,
+                  toolbarHeight: 72,
+                  automaticallyImplyLeading: false,
+                  flexibleSpace: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Habits',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => _showHabitDialog(context, database),
+                          icon: const Icon(Icons.add, color: AppColors.textPrimary, size: 28),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        if (index.isOdd) {
+                          return const SizedBox(height: 12);
+                        }
+                        final habitIndex = index ~/ 2;
+                        return _HabitCard(
+                          habit: habits[habitIndex],
+                          selectedDate: selectedDate,
+                          database: database,
+                          onTap: () => _showHabitDetail(context, habits[habitIndex]),
+                          onEdit: () => _showHabitDialog(context, database, habit: habits[habitIndex]),
+                          onDelete: () => _deleteHabit(context, database, habits[habitIndex]),
+                        );
+                      },
+                      childCount: habits.length * 2 - 1,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -595,19 +632,19 @@ class _HabitCardState extends ConsumerState<_HabitCard> {
 
         return Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                habitColor.withOpacity(0.15),
-                habitColor.withOpacity(0.05),
-              ],
-            ),
+            color: const Color(0xFF1E1E1E),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: habitColor.withOpacity(0.3),
-              width: 1,
+              color: habitColor.withOpacity(0.4),
+              width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: habitColor.withOpacity(0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Material(
             color: Colors.transparent,
@@ -670,18 +707,25 @@ class _HabitCardState extends ConsumerState<_HabitCard> {
                           GestureDetector(
                             onTap: () => _toggleHabit(isCompleted, log),
                             child: Container(
-                              width: 32,
-                              height: 32,
+                              width: 36,
+                              height: 36,
                               decoration: BoxDecoration(
                                 color: isCompleted ? habitColor : Colors.transparent,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: habitColor,
-                                  width: 2,
+                                  width: 2.5,
                                 ),
+                                boxShadow: isCompleted ? [
+                                  BoxShadow(
+                                    color: habitColor.withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ] : null,
                               ),
                               child: isCompleted
-                                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
                                   : null,
                             ),
                           )
@@ -761,43 +805,47 @@ class _HabitCardState extends ConsumerState<_HabitCard> {
                       habit: widget.habit,
                       database: widget.database,
                       habitColor: habitColor,
+                      currentDateLog: _localLog,
+                      selectedDate: widget.selectedDate,
                     ),
                     
-                    // Row 3: Goal info
-                    if (widget.habit.goalType == 'unit' && widget.habit.goalUnit != null) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(Icons.flag_outlined, size: 14, color: habitColor.withOpacity(0.7)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Goal: ${widget.habit.goalValue?.toStringAsFixed(0)} ${widget.habit.goalUnit}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 12,
-                            ),
+                    // Row 3: Stats row
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        // Goal info on the left
+                        if (widget.habit.goalType == 'unit' && widget.habit.goalUnit != null)
+                          Row(
+                            children: [
+                              Icon(Icons.flag_outlined, size: 13, color: AppColors.textMuted),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Goal: ${widget.habit.goalValue?.toStringAsFixed(0)} ${widget.habit.goalUnit}',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
-                    
-                    // Row 4: Last completion time
-                    if (_lastLog != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.history, size: 14, color: habitColor.withOpacity(0.7)),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Last completed: ${DateFormat('MMM d, y').format(_lastLog!.date)}',
-                            style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 12,
-                            ),
+                        const Spacer(),
+                        // Last completion time on the right
+                        if (_lastLog != null)
+                          Row(
+                            children: [
+                              Icon(Icons.history, size: 13, color: AppColors.textMuted),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Last: ${DateFormat('MMM d').format(_lastLog!.date)}',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -1008,11 +1056,16 @@ class _CompactContributionGrid extends StatefulWidget {
   final Habit habit;
   final AppDatabase database;
   final Color habitColor;
+  final HabitLog? currentDateLog;
+  final DateTime selectedDate;
 
   const _CompactContributionGrid({
+    super.key,
     required this.habit,
     required this.database,
     required this.habitColor,
+    required this.currentDateLog,
+    required this.selectedDate,
   });
 
   @override
@@ -1020,7 +1073,7 @@ class _CompactContributionGrid extends StatefulWidget {
 }
 
 class _CompactContributionGridState extends State<_CompactContributionGrid> {
-  Map<String, HabitLog>? _logMap;
+  Map<String, HabitLog> _logMap = {};
   bool _isLoading = true;
 
   @override
@@ -1032,10 +1085,24 @@ class _CompactContributionGridState extends State<_CompactContributionGrid> {
   @override
   void didUpdateWidget(_CompactContributionGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Only reload if the habit ID changed
+    // Reload if habit changes
     if (oldWidget.habit.id != widget.habit.id) {
       _loadLogs();
+    } else if (oldWidget.currentDateLog != widget.currentDateLog) {
+      // Optimistically update the current date log in the map
+      _updateCurrentDateLog();
     }
+  }
+
+  void _updateCurrentDateLog() {
+    setState(() {
+      final key = _dateKey(widget.selectedDate);
+      if (widget.currentDateLog != null) {
+        _logMap[key] = widget.currentDateLog!;
+      } else {
+        _logMap.remove(key);
+      }
+    });
   }
 
   Future<void> _loadLogs() async {
@@ -1053,6 +1120,14 @@ class _CompactContributionGridState extends State<_CompactContributionGrid> {
       for (final log in logs) {
         final key = _dateKey(log.date);
         logMap[key] = log;
+      }
+
+      // Apply current date log optimistically
+      final currentKey = _dateKey(widget.selectedDate);
+      if (widget.currentDateLog != null) {
+        logMap[currentKey] = widget.currentDateLog!;
+      } else {
+        logMap.remove(currentKey);
       }
 
       setState(() {
@@ -1074,7 +1149,7 @@ class _CompactContributionGridState extends State<_CompactContributionGrid> {
       return const SizedBox(height: 60);
     }
 
-    return _buildFullWidthGrid(_logMap ?? {});
+    return _buildFullWidthGrid(_logMap);
   }
 
   Widget _buildFullWidthGrid(Map<String, HabitLog> logMap) {
@@ -1224,101 +1299,6 @@ class _CompactContributionGridState extends State<_CompactContributionGrid> {
 
   String _dateKey(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-}
-
-// Date Selector
-class _DateSelector extends StatelessWidget {
-  final DateTime selectedDate;
-  final ValueChanged<DateTime> onDateChanged;
-
-  const _DateSelector({
-    required this.selectedDate,
-    required this.onDateChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dates = List.generate(7, (index) {
-      return DateTime.now().subtract(Duration(days: 6 - index));
-    });
-
-    return SizedBox(
-      height: 80,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        scrollDirection: Axis.horizontal,
-        itemCount: dates.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final date = dates[index];
-          final isSelected = date.day == selectedDate.day &&
-              date.month == selectedDate.month &&
-              date.year == selectedDate.year;
-          final isToday = date.day == DateTime.now().day &&
-              date.month == DateTime.now().month &&
-              date.year == DateTime.now().year;
-
-          return GestureDetector(
-            onTap: () => onDateChanged(date),
-            child: Container(
-              width: 60,
-              decoration: BoxDecoration(
-                color: isSelected 
-                    ? AppColors.accentBlue.withOpacity(0.15) 
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected 
-                      ? AppColors.accentBlue 
-                      : AppColors.border,
-                  width: isSelected ? 2 : 0.5,
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    DateFormat('EEE').format(date).substring(0, 1),
-                    style: TextStyle(
-                      color: isSelected 
-                          ? AppColors.accentBlue 
-                          : AppColors.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    date.day.toString(),
-                    style: TextStyle(
-                      color: isSelected 
-                          ? AppColors.textPrimary 
-                          : AppColors.textSecondary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (isToday) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isSelected 
-                            ? AppColors.accentBlue 
-                            : AppColors.textMuted,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
   }
 }
 

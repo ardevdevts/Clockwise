@@ -13,11 +13,14 @@ class AppDatabase extends _$AppDatabase {
 
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   // Migration strategy
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (migrator) async {
+      await migrator.createAll();
+    },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         // Add color column to habits table
@@ -28,6 +31,15 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(habits, habits.customDays);
         await migrator.addColumn(habits, habits.intervalDays);
       }
+      if (from < 4) {
+        // Add color and icon columns to projects table
+        await migrator.addColumn(projects, projects.color);
+        await migrator.addColumn(projects, projects.icon);
+      }
+    },
+    beforeOpen: (details) async {
+      // Enable foreign keys
+      await customStatement('PRAGMA foreign_keys = ON');
     },
   );
 
@@ -129,6 +141,27 @@ class AppDatabase extends _$AppDatabase {
   // Watch a single todo by ID (stream)
   Stream<Todo?> watchTodoById(int id) {
     return (select(todos)..where((tbl) => tbl.id.equals(id))).watchSingleOrNull();
+  }
+
+  // Get project task statistics
+  Future<Map<String, int>> getProjectStats(int projectId) async {
+    final tasks = await getTasksByProject(projectId);
+    final completedTasks = tasks.where((task) => task.completed).length;
+    return {
+      'total': tasks.length,
+      'completed': completedTasks,
+    };
+  }
+
+  // Watch project task statistics (stream)
+  Stream<Map<String, int>> watchProjectStats(int projectId) {
+    return watchTasksByProject(projectId).map((tasks) {
+      final completedTasks = tasks.where((task) => task.completed).length;
+      return {
+        'total': tasks.length,
+        'completed': completedTasks,
+      };
+    });
   }
 
   // HABIT-SPECIFIC QUERIES

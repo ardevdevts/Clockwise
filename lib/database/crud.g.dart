@@ -45,6 +45,29 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 6,
+      maxTextLength: 9,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('00ADEF'),
+  );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -58,7 +81,14 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, description, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    description,
+    color,
+    icon,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -91,6 +121,18 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         ),
       );
     }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -118,6 +160,14 @@ class $ProjectsTable extends Projects with TableInfo<$ProjectsTable, Project> {
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      )!,
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -135,11 +185,15 @@ class Project extends DataClass implements Insertable<Project> {
   final int id;
   final String name;
   final String? description;
+  final String color;
+  final String? icon;
   final DateTime createdAt;
   const Project({
     required this.id,
     required this.name,
     this.description,
+    required this.color,
+    this.icon,
     required this.createdAt,
   });
   @override
@@ -149,6 +203,10 @@ class Project extends DataClass implements Insertable<Project> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
+    }
+    map['color'] = Variable<String>(color);
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -161,6 +219,8 @@ class Project extends DataClass implements Insertable<Project> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      color: Value(color),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
       createdAt: Value(createdAt),
     );
   }
@@ -174,6 +234,8 @@ class Project extends DataClass implements Insertable<Project> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String?>(json['description']),
+      color: serializer.fromJson<String>(json['color']),
+      icon: serializer.fromJson<String?>(json['icon']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -184,6 +246,8 @@ class Project extends DataClass implements Insertable<Project> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String?>(description),
+      'color': serializer.toJson<String>(color),
+      'icon': serializer.toJson<String?>(icon),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -192,11 +256,15 @@ class Project extends DataClass implements Insertable<Project> {
     int? id,
     String? name,
     Value<String?> description = const Value.absent(),
+    String? color,
+    Value<String?> icon = const Value.absent(),
     DateTime? createdAt,
   }) => Project(
     id: id ?? this.id,
     name: name ?? this.name,
     description: description.present ? description.value : this.description,
+    color: color ?? this.color,
+    icon: icon.present ? icon.value : this.icon,
     createdAt: createdAt ?? this.createdAt,
   );
   Project copyWithCompanion(ProjectsCompanion data) {
@@ -206,6 +274,8 @@ class Project extends DataClass implements Insertable<Project> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      color: data.color.present ? data.color.value : this.color,
+      icon: data.icon.present ? data.icon.value : this.icon,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -216,13 +286,16 @@ class Project extends DataClass implements Insertable<Project> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('color: $color, ')
+          ..write('icon: $icon, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, description, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, description, color, icon, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -230,6 +303,8 @@ class Project extends DataClass implements Insertable<Project> {
           other.id == this.id &&
           other.name == this.name &&
           other.description == this.description &&
+          other.color == this.color &&
+          other.icon == this.icon &&
           other.createdAt == this.createdAt);
 }
 
@@ -237,29 +312,39 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
   final Value<int> id;
   final Value<String> name;
   final Value<String?> description;
+  final Value<String> color;
+  final Value<String?> icon;
   final Value<DateTime> createdAt;
   const ProjectsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.description = const Value.absent(),
+    this.color = const Value.absent(),
+    this.icon = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   ProjectsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
     this.description = const Value.absent(),
+    this.color = const Value.absent(),
+    this.icon = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Project> custom({
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? description,
+    Expression<String>? color,
+    Expression<String>? icon,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (description != null) 'description': description,
+      if (color != null) 'color': color,
+      if (icon != null) 'icon': icon,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -268,12 +353,16 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     Value<int>? id,
     Value<String>? name,
     Value<String?>? description,
+    Value<String>? color,
+    Value<String?>? icon,
     Value<DateTime>? createdAt,
   }) {
     return ProjectsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -290,6 +379,12 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -302,6 +397,8 @@ class ProjectsCompanion extends UpdateCompanion<Project> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('color: $color, ')
+          ..write('icon: $icon, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2397,6 +2494,8 @@ typedef $$ProjectsTableCreateCompanionBuilder =
       Value<int> id,
       required String name,
       Value<String?> description,
+      Value<String> color,
+      Value<String?> icon,
       Value<DateTime> createdAt,
     });
 typedef $$ProjectsTableUpdateCompanionBuilder =
@@ -2404,6 +2503,8 @@ typedef $$ProjectsTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> name,
       Value<String?> description,
+      Value<String> color,
+      Value<String?> icon,
       Value<DateTime> createdAt,
     });
 
@@ -2452,6 +2553,16 @@ class $$ProjectsTableFilterComposer
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2510,6 +2621,16 @@ class $$ProjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2535,6 +2656,12 @@ class $$ProjectsTableAnnotationComposer
     column: $table.description,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2596,11 +2723,15 @@ class $$ProjectsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String> color = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProjectsCompanion(
                 id: id,
                 name: name,
                 description: description,
+                color: color,
+                icon: icon,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -2608,11 +2739,15 @@ class $$ProjectsTableTableManager
                 Value<int> id = const Value.absent(),
                 required String name,
                 Value<String?> description = const Value.absent(),
+                Value<String> color = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProjectsCompanion.insert(
                 id: id,
                 name: name,
                 description: description,
+                color: color,
+                icon: icon,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
