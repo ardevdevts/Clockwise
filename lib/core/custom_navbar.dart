@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:financialtracker/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -18,63 +19,84 @@ class CustomNavbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double itemWidth = MediaQuery.of(context).size.width / numberOfDestinations;
-    const double indicatorWidth = 20;
 
     return Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey, width: 0.3)),
+      height: 60,
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withOpacity(0.06),
+            width: 0.5,
+          ),
         ),
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            NavigationBarTheme(
-              data: NavigationBarThemeData(
-                backgroundColor: themeDark.colorScheme.surface,
-                surfaceTintColor: Colors.transparent,
-                indicatorColor: Colors.transparent,
-                elevation: 0,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-                iconTheme: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return const IconThemeData(color: Colors.white);
-                  }
-                  return const IconThemeData(color: Colors.grey);
-                }),
-              ),
-              child: NavigationBar(
-                height: 70,
-                selectedIndex: currentIndex,
-                onDestinationSelected: onDestinationSelected,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.task_outlined),
-                    selectedIcon: Icon(Icons.task),
-                    label: 'Tasks',
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            color: themeDark.colorScheme.surface.withOpacity(0.8),
+            child: Stack(
+              children: [
+                Row(
+                  children: List.generate(
+                    numberOfDestinations,
+                    (index) => _buildNavItem(
+                      index: index,
+                      isSelected: currentIndex == index,
+                      itemWidth: itemWidth,
+                    ),
                   ),
-                  NavigationDestination(
-                    icon: Icon(Icons.monitor_heart_outlined),
-                    selectedIcon: Icon(Icons.monitor_heart),
-                    label: 'Habits',
-                  ),
-                ],
-              ),
-            ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutCubic,
-              bottom: 15,
-              left: (currentIndex * itemWidth) + (itemWidth / numberOfDestinations) - (indicatorWidth / numberOfDestinations),
-              width: indicatorWidth,
-              height: 4,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(3),
-                  color: themeDark.colorScheme.onSurface,
                 ),
-              ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOutCubic,
+                  left: (currentIndex * itemWidth) + (itemWidth / 2) - 18,
+                  bottom: 8,
+                  child: Container(
+                    width: 36,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(1.5),
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required bool isSelected,
+    required double itemWidth,
+  }) {
+    final icons = [
+      Icons.task_outlined,
+      Icons.monitor_heart_outlined,
+    ];
+    final selectedIcons = [
+      Icons.task,
+      Icons.monitor_heart,
+    ];
+
+    return GestureDetector(
+      onTap: () => onDestinationSelected(index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: itemWidth,
+        height: 60,
+        child: Center(
+          child: Icon(
+            isSelected ? selectedIcons[index] : icons[index],
+            size: 24,
+            color: isSelected ? Colors.white : Colors.grey.shade600,
+          ),
+        ),
+      ),
+    );
   }
 }
