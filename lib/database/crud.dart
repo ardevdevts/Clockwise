@@ -5,7 +5,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 part 'crud.g.dart'; // will be generated
 
 @DriftDatabase(
-  tables: [Projects, Todos, Habits, HabitLogs, Reminders],
+  tables: [Projects, Todos, Habits, HabitLogs, Reminders, TodoLinks, TodoImages],
 )
 class AppDatabase extends _$AppDatabase {
 
@@ -13,7 +13,7 @@ class AppDatabase extends _$AppDatabase {
 
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   // Migration strategy
   @override
@@ -35,6 +35,14 @@ class AppDatabase extends _$AppDatabase {
         // Add color and icon columns to projects table
         await migrator.addColumn(projects, projects.color);
         await migrator.addColumn(projects, projects.icon);
+      }
+      if (from < 5) {
+        // Create TodoLinks table
+        await migrator.createTable(todoLinks);
+      }
+      if (from < 6) {
+        // Create TodoImages table
+        await migrator.createTable(todoImages);
       }
     },
     beforeOpen: (details) async {
@@ -65,6 +73,10 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> insertReminder(RemindersCompanion reminder) => into(reminders).insert(reminder);
 
+  Future<int> insertTodoLink(TodoLinksCompanion link) => into(todoLinks).insert(link);
+
+  Future<int> insertTodoImage(TodoImagesCompanion image) => into(todoImages).insert(image);
+
   // UPDATE
 
   Future<bool> updateTodo(Todo todo) => update(todos).replace(todo);
@@ -77,7 +89,11 @@ class AppDatabase extends _$AppDatabase {
 
   Future<bool> updateReminder(Reminder reminder) => update(reminders).replace(reminder);
 
-  // DELETE 
+  Future<bool> updateTodoLink(TodoLink link) => update(todoLinks).replace(link);
+
+  Future<bool> updateTodoImage(TodoImage image) => update(todoImages).replace(image);
+
+  // DELETE
 
   Future<int> deleteTodo(int id) => (delete(todos)..where((tbl) => tbl.id.equals(id))).go();
 
@@ -88,6 +104,10 @@ class AppDatabase extends _$AppDatabase {
   Future<int> deleteHabitLog(int id) => (delete(habitLogs)..where((tbl) => tbl.id.equals(id))).go();
 
   Future<int> deleteReminder(int id) => (delete(reminders)..where((tbl) => tbl.id.equals(id))).go();
+
+  Future<int> deleteTodoLink(int id) => (delete(todoLinks)..where((tbl) => tbl.id.equals(id))).go();
+
+  Future<int> deleteTodoImage(int id) => (delete(todoImages)..where((tbl) => tbl.id.equals(id))).go();
 
   // TASK-SPECIFIC QUERIES
 
@@ -141,6 +161,26 @@ class AppDatabase extends _$AppDatabase {
   // Watch a single todo by ID (stream)
   Stream<Todo?> watchTodoById(int id) {
     return (select(todos)..where((tbl) => tbl.id.equals(id))).watchSingleOrNull();
+  }
+
+  // Get links for a specific todo
+  Future<List<TodoLink>> getTodoLinks(int todoId) {
+    return (select(todoLinks)..where((tbl) => tbl.todoId.equals(todoId))).get();
+  }
+
+  // Watch links for a specific todo (stream)
+  Stream<List<TodoLink>> watchTodoLinks(int todoId) {
+    return (select(todoLinks)..where((tbl) => tbl.todoId.equals(todoId))).watch();
+  }
+
+  // Get images for a specific todo
+  Future<List<TodoImage>> getTodoImages(int todoId) {
+    return (select(todoImages)..where((tbl) => tbl.todoId.equals(todoId))).get();
+  }
+
+  // Watch images for a specific todo (stream)
+  Stream<List<TodoImage>> watchTodoImages(int todoId) {
+    return (select(todoImages)..where((tbl) => tbl.todoId.equals(todoId))).watch();
   }
 
   // Get project task statistics

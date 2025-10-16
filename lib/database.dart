@@ -66,5 +66,25 @@ class Reminders extends Table {
   BoolColumn get recurring => boolean().withDefault(const Constant(false))();
 }
 
+@DataClassName('TodoLink')
+class TodoLinks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get todoId =>
+      integer().references(Todos, #id, onDelete: KeyAction.cascade)();
+  TextColumn get url => text().withLength(min: 1, max: 500)();
+  TextColumn get title => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DataClassName('TodoImage')
+class TodoImages extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get todoId =>
+      integer().references(Todos, #id, onDelete: KeyAction.cascade)();
+  TextColumn get imagePath => text().withLength(min: 1, max: 500)();
+  TextColumn get caption => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 enum Priority { low, medium, high, urgent }
 enum GoalType { unit, boolean }

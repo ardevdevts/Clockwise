@@ -15,9 +15,9 @@ final ThemeData themeDark = ThemeData(
   cardColor: AppColors.surface,
   dividerColor: AppColors.border,
   textTheme: const TextTheme(
-    bodyLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w400, fontSize: 16),
-    bodyMedium: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w500, fontSize: 14),
-    labelSmall: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 12),
+    bodyLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w400, fontSize: 13),
+    bodyMedium: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w500, fontSize: 12),
+    labelSmall: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 11),
   ),
   iconTheme: const IconThemeData(color: AppColors.textSecondary),
   appBarTheme: const AppBarTheme(

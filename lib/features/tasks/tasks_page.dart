@@ -8,6 +8,11 @@ import 'package:drift/drift.dart' as drift;
 import '../../core/services/service_providers.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
+import 'dart:io';
 
 class TasksPage extends ConsumerStatefulWidget {
   const TasksPage({super.key});
@@ -1173,212 +1178,438 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: Row(
+                // Sticky Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.border.withOpacity(0.3), width: 1),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back_ios, color: AppColors.textPrimary, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            onPressed: () => _showEditTaskDialog(context, database),
+                            icon: const Icon(Icons.edit_outlined, color: AppColors.accentBlue, size: 22),
+                          ),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, color: AppColors.textSecondary, size: 22),
+                            color: AppColors.elevatedSurface,
+                            onSelected: (value) {
+                              if (value == 'delete') {
+                                _deleteTask(context, database);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Delete Task', style: TextStyle(color: AppColors.error)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () => _showEditTaskDialog(context, database),
-                        icon: const Icon(Icons.edit_outlined, color: AppColors.textPrimary, size: 22),
-                      ),
-                      IconButton(
-                        onPressed: () => _deleteTask(context, database),
-                        icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 22),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              database.updateTodo(task.copyWith(completed: !task.completed));
+                            },
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: task.completed ? AppColors.accentBlue : AppColors.border,
+                                  width: 2.5,
+                                ),
+                                color: task.completed ? AppColors.accentBlue : Colors.transparent,
+                              ),
+                              child: task.completed
+                                  ? const Icon(Icons.check, size: 18, color: AppColors.background)
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              task.title,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: -0.3,
+                                decoration: task.completed ? TextDecoration.lineThrough : null,
+                                decorationColor: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _enhancedPriorityBadge(task.priority),
+                        ],
                       ),
                     ],
                   ),
                 ),
 
-                // Task Details
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          database.updateTodo(task.copyWith(completed: !task.completed));
-                        },
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: task.completed ? AppColors.accentBlue : AppColors.border,
-                              width: 2,
-                            ),
-                            color: task.completed ? AppColors.accentBlue : Colors.transparent,
-                          ),
-                          child: task.completed
-                              ? const Icon(Icons.check, size: 16, color: AppColors.background)
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              task.title,
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.5,
-                                decoration: task.completed ? TextDecoration.lineThrough : null,
-                                decorationColor: AppColors.textMuted,
-                              ),
-                            ),
-                            if (task.description != null && task.description!.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Text(
+                // Scrollable Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 12),
+                        
+                        // Description Card
+                        if (task.description != null && task.description!.isNotEmpty)
+                          _SectionCard(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text(
                                 task.description!,
                                 style: const TextStyle(
                                   color: AppColors.textSecondary,
-                                  fontSize: 15,
-                                  height: 1.5,
+                                  fontSize: 14,
+                                  height: 1.6,
+                                  letterSpacing: 0.2,
                                 ),
                               ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      _priorityBadge(task.priority),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    height: 0.5,
-                    color: AppColors.border,
-                  ),
-                ],
-              ),
-            ),
-
-            // Reminders Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  const Text(
-                    'Reminders',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () async {
-                      final saved = await _showAddReminderDialog(context, ref);
-                      if (saved) {
-                        _remindersListKey.currentState?._loadReminders();
-                      }
-                    },
-                    icon: const Icon(Icons.add, color: AppColors.textSecondary, size: 20),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Reminders List
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: _TaskRemindersList(
-                key: _remindersListKey,
-                taskId: task.id,
-              ),
-            ),
-
-            // Subtasks Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  const Text(
-                    'Subtasks',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => _showSubtaskDialog(context, database),
-                    icon: const Icon(Icons.add, color: AppColors.textSecondary, size: 20),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-
-            // Subtasks List
-            Expanded(
-              child: StreamBuilder<List<Todo>>(
-                stream: database.watchSubtasks(task.id),
-                builder: (context, snapshot) {
-                  final subtasks = snapshot.data ?? [];
-
-                  if (subtasks.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No subtasks',
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 14),
-                      ),
-                    );
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                    itemCount: subtasks.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 1),
-                    itemBuilder: (context, index) {
-                      return _TaskItem(
-                        task: subtasks[index],
-                        database: database,
-                        isSubtask: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => TaskDetailPage(
-                                task: subtasks[index],
-                                project: widget.project,
-                              ),
                             ),
-                          );
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
+                          ),
+
+                        // Reminders Section
+                        _RemindersSection(
+                          task: task,
+                          remindersListKey: _remindersListKey,
+                          onAddReminder: () async {
+                            final saved = await _showAddReminderDialog(context, ref);
+                            if (saved) {
+                              _remindersListKey.currentState?._loadReminders();
+                            }
+                          },
+                        ),
+
+                        // Notes Section
+                        _NotesSection(
+                          notes: task.notes,
+                          onEdit: () => _showNotesDialog(context, database),
+                        ),
+
+                        // Links Section
+                        _LinksSection(
+                          taskId: task.id,
+                          onAddLink: () => _showAddLinkDialog(context, database),
+                        ),
+
+                        // Images Section
+                        _ImagesSection(
+                          taskId: task.id,
+                          onAddImage: () => _showAddImageDialog(context, database),
+                        ),
+
+                        // Subtasks Section
+                        _SubtasksSection(
+                          task: task,
+                          database: database,
+                          project: widget.project,
+                          onAddSubtask: () => _showSubtaskDialog(context, database),
+                        ),
+
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
         );
       },
+    );
+  }
+  
+  void _showNotesDialog(BuildContext context, AppDatabase database) {
+    final notesController = TextEditingController(text: widget.task.notes ?? '');
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.elevatedSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Task Notes',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: notesController,
+                maxLines: 8,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'Add notes...',
+                  hintStyle: TextStyle(color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await database.updateTodo(
+                        widget.task.copyWith(
+                          notes: drift.Value(notesController.text.trim().isEmpty
+                              ? null
+                              : notesController.text.trim()),
+                        ),
+                      );
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddLinkDialog(BuildContext context, AppDatabase database) {
+    final urlController = TextEditingController();
+    final titleController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.elevatedSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Add Link',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: urlController,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'URL',
+                  hintText: 'https://example.com',
+                  labelStyle: const TextStyle(color: AppColors.textSecondary),
+                  hintStyle: TextStyle(color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: titleController,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Title (optional)',
+                  hintText: 'Link name',
+                  labelStyle: const TextStyle(color: AppColors.textSecondary),
+                  hintStyle: TextStyle(color: AppColors.textMuted),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (urlController.text.trim().isEmpty) return;
+                      await database.insertTodoLink(
+                        TodoLinksCompanion.insert(
+                          todoId: widget.task.id,
+                          url: urlController.text.trim(),
+                          title: drift.Value(titleController.text.trim().isEmpty
+                              ? null
+                              : titleController.text.trim()),
+                        ),
+                      );
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Add'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddImageDialog(BuildContext context, AppDatabase database) async {
+    final ImagePicker picker = ImagePicker();
+    
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.elevatedSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Add Image',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _ImageSourceButton(
+                    icon: Icons.camera_alt,
+                    label: 'Camera',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await picker.pickImage(source: ImageSource.camera);
+                      if (image != null) {
+                        await database.insertTodoImage(
+                          TodoImagesCompanion.insert(
+                            todoId: widget.task.id,
+                            imagePath: image.path,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  _ImageSourceButton(
+                    icon: Icons.photo_library,
+                    label: 'Gallery',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                      if (image != null) {
+                        await database.insertTodoImage(
+                          TodoImagesCompanion.insert(
+                            todoId: widget.task.id,
+                            imagePath: image.path,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1747,92 +1978,6 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 }
 
 // Task Reminders List Widget
-class _TaskRemindersList extends ConsumerStatefulWidget {
-  final int taskId;
-
-  const _TaskRemindersList({super.key, required this.taskId});
-
-  @override
-  ConsumerState<_TaskRemindersList> createState() => _TaskRemindersListState();
-}
-
-class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
-  List<Reminder> _reminders = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadReminders();
-  }
-
-  Future<void> _loadReminders() async {
-    setState(() => _isLoading = true);
-    final reminderService = ref.read(reminderServiceProvider);
-    final reminders = await reminderService.getTaskReminders(widget.taskId);
-    if (mounted) {
-      setState(() {
-        _reminders = reminders;
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const SizedBox(
-        height: 40,
-        child: Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
-          ),
-        ),
-      );
-    }
-
-    if (_reminders.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      children: _reminders.map((reminder) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: AppColors.border, width: 0.5),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.notifications_outlined, size: 18, color: AppColors.accentBlue),
-              const SizedBox(width: 12),
-              Text(
-                DateFormat('MMM dd, yyyy - hh:mm a').format(reminder.remindAt),
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                constraints: const BoxConstraints(),
-                padding: EdgeInsets.zero,
-                onPressed: () async {
-                  final reminderService = ref.read(reminderServiceProvider);
-                  await reminderService.removeReminder(reminder.id);
-                  await _loadReminders(); // Refresh the list
-                },
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
 class _TaskItem extends StatelessWidget {
   final Todo task;
   final AppDatabase database;
@@ -2095,5 +2240,788 @@ String _priorityLabel(Priority priority) {
       return 'Low';
   }
 }
+
+// Enhanced Priority Badge
+Widget _enhancedPriorityBadge(Priority priority) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: _priorityColor(priority).withOpacity(0.15),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: _priorityColor(priority), width: 1.5),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: _priorityColor(priority),
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          _priorityLabel(priority),
+          style: TextStyle(
+            color: _priorityColor(priority),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Section Card Widget
+class _SectionCard extends StatelessWidget {
+  final Widget child;
+
+  const _SectionCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border.withOpacity(0.5), width: 1),
+      ),
+      child: child,
+    );
+  }
+}
+
+// Section Header Widget
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final VoidCallback? onAdd;
+  final VoidCallback? onEdit;
+  final int? count;
+
+  const _SectionHeader({
+    required this.title,
+    required this.icon,
+    this.onAdd,
+    this.onEdit,
+    this.count,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
+          if (count != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.accentBlue.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  color: AppColors.accentBlue,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          const Spacer(),
+          if (onEdit != null)
+            IconButton(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.accentBlue),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          if (onAdd != null) ...[
+            if (onEdit != null) const SizedBox(width: 12),
+            IconButton(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add_circle_outline, size: 22, color: AppColors.accentBlue),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// Reminders Section
+class _RemindersSection extends ConsumerWidget {
+  final Todo task;
+  final GlobalKey<_TaskRemindersListState> remindersListKey;
+  final VoidCallback onAddReminder;
+
+  const _RemindersSection({
+    required this.task,
+    required this.remindersListKey,
+    required this.onAddReminder,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _TaskRemindersList(
+      key: remindersListKey,
+      taskId: task.id,
+      onAdd: onAddReminder,
+    );
+  }
+}
+
+// Task Reminders List
+class _TaskRemindersList extends ConsumerStatefulWidget {
+  final int taskId;
+  final VoidCallback onAdd;
+
+  const _TaskRemindersList({
+    super.key,
+    required this.taskId,
+    required this.onAdd,
+  });
+
+  @override
+  ConsumerState<_TaskRemindersList> createState() => _TaskRemindersListState();
+}
+
+class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
+  List<Reminder> _reminders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReminders();
+  }
+
+  Future<void> _loadReminders() async {
+    final reminderService = ref.read(reminderServiceProvider);
+    final reminders = await reminderService.getTaskReminders(widget.taskId);
+    if (mounted) {
+      setState(() => _reminders = reminders);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          title: 'Reminders',
+          icon: Icons.notifications_outlined,
+          count: _reminders.isEmpty ? null : _reminders.length,
+          onAdd: widget.onAdd,
+        ),
+        if (_reminders.isNotEmpty)
+          _SectionCard(
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(12),
+              itemCount: _reminders.length,
+              separatorBuilder: (_, __) => const Divider(height: 16, color: AppColors.border),
+              itemBuilder: (context, index) {
+                final reminder = _reminders[index];
+                return Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentTeal.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.access_time, size: 18, color: AppColors.accentTeal),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            DateFormat('MMM dd, yyyy').format(reminder.remindAt),
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            DateFormat('hh:mm a').format(reminder.remindAt),
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                      onPressed: () async {
+                        final reminderService = ref.read(reminderServiceProvider);
+                        await reminderService.removeReminder(reminder.id);
+                        await _loadReminders();
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+// Notes Section
+class _NotesSection extends StatelessWidget {
+  final String? notes;
+  final VoidCallback onEdit;
+
+  const _NotesSection({
+    required this.notes,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          title: 'Notes',
+          icon: Icons.note_outlined,
+          onEdit: onEdit,
+        ),
+        if (notes != null && notes!.isNotEmpty)
+          _SectionCard(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                notes!,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.6,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+// Links Section
+class _LinksSection extends ConsumerWidget {
+  final int taskId;
+  final VoidCallback onAddLink;
+
+  const _LinksSection({
+    required this.taskId,
+    required this.onAddLink,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final database = ref.watch(databaseProvider);
+
+    return StreamBuilder<List<TodoLink>>(
+      stream: database.watchTodoLinks(taskId),
+      builder: (context, snapshot) {
+        final links = snapshot.data ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(
+              title: 'Links',
+              icon: Icons.link,
+              count: links.isEmpty ? null : links.length,
+              onAdd: onAddLink,
+            ),
+            if (links.isNotEmpty)
+              _SectionCard(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(8),
+                  itemCount: links.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                  itemBuilder: (context, index) {
+                    final link = links[index];
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () async {
+                          final uri = Uri.parse(link.url);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.open_in_new, size: 16, color: AppColors.accentBlue),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (link.title != null && link.title!.isNotEmpty)
+                                      Text(
+                                        link.title!,
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    Text(
+                                      link.url,
+                                      style: TextStyle(
+                                        color: link.title != null && link.title!.isNotEmpty
+                                            ? AppColors.textMuted
+                                            : AppColors.textPrimary,
+                                        fontSize: 13,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                onPressed: () async {
+                                  await database.deleteTodoLink(link.id);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Images Section
+class _ImagesSection extends ConsumerWidget {
+  final int taskId;
+  final VoidCallback onAddImage;
+
+  const _ImagesSection({
+    required this.taskId,
+    required this.onAddImage,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final database = ref.watch(databaseProvider);
+
+    return StreamBuilder<List<TodoImage>>(
+      stream: database.watchTodoImages(taskId),
+      builder: (context, snapshot) {
+        final images = snapshot.data ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(
+              title: 'Images',
+              icon: Icons.image_outlined,
+              count: images.isEmpty ? null : images.length,
+              onAdd: onAddImage,
+            ),
+            if (images.isNotEmpty)
+              _SectionCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: images.length,
+                    itemBuilder: (context, index) {
+                      final image = images[index];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => _ImageViewerPage(
+                                images: images,
+                                initialIndex: index,
+                                onDelete: (id) async {
+                                  await database.deleteTodoImage(id);
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border.withOpacity(0.5), width: 1),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                File(image.imagePath),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: AppColors.elevatedSurface,
+                                    child: const Icon(
+                                      Icons.broken_image,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  );
+                                },
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        backgroundColor: AppColors.elevatedSurface,
+                                        title: const Text(
+                                          'Delete Image',
+                                          style: TextStyle(color: AppColors.textPrimary),
+                                        ),
+                                        content: const Text(
+                                          'Are you sure?',
+                                          style: TextStyle(color: AppColors.textSecondary),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: const Text(
+                                              'Delete',
+                                              style: TextStyle(color: AppColors.error),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true) {
+                                      await database.deleteTodoImage(image.id);
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.7),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Subtasks Section
+class _SubtasksSection extends StatelessWidget {
+  final Todo task;
+  final AppDatabase database;
+  final Project project;
+  final VoidCallback onAddSubtask;
+
+  const _SubtasksSection({
+    required this.task,
+    required this.database,
+    required this.project,
+    required this.onAddSubtask,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Todo>>(
+      stream: database.watchSubtasks(task.id),
+      builder: (context, snapshot) {
+        final subtasks = snapshot.data ?? [];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(
+              title: 'Subtasks',
+              icon: Icons.checklist_outlined,
+              count: subtasks.isEmpty ? null : subtasks.length,
+              onAdd: onAddSubtask,
+            ),
+            if (subtasks.isNotEmpty)
+              _SectionCard(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(8),
+                  itemCount: subtasks.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                  itemBuilder: (context, index) {
+                    return _TaskItem(
+                      task: subtasks[index],
+                      database: database,
+                      isSubtask: true,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TaskDetailPage(
+                              task: subtasks[index],
+                              project: project,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// Image Source Button
+class _ImageSourceButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ImageSourceButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 120,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border, width: 1),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: AppColors.accentBlue, size: 36),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Image Viewer Page
+class _ImageViewerPage extends StatefulWidget {
+  final List<TodoImage> images;
+  final int initialIndex;
+  final Function(int) onDelete;
+
+  const _ImageViewerPage({
+    required this.images,
+    required this.initialIndex,
+    required this.onDelete,
+  });
+
+  @override
+  State<_ImageViewerPage> createState() => _ImageViewerPageState();
+}
+
+class _ImageViewerPageState extends State<_ImageViewerPage> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text('${_currentIndex + 1} / ${widget.images.length}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: AppColors.elevatedSurface,
+                  title: const Text(
+                    'Delete Image',
+                    style: TextStyle(color: AppColors.textPrimary),
+                  ),
+                  content: const Text(
+                    'Are you sure you want to delete this image?',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(color: AppColors.error),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true && mounted) {
+                await widget.onDelete(widget.images[_currentIndex].id);
+                if (mounted) Navigator.pop(context);
+              }
+            },
+          ),
+        ],
+      ),
+      body: PhotoViewGallery.builder(
+        pageController: _pageController,
+        itemCount: widget.images.length,
+        builder: (context, index) {
+          return PhotoViewGalleryPageOptions(
+            imageProvider: FileImage(File(widget.images[index].imagePath)),
+            minScale: PhotoViewComputedScale.contained,
+            maxScale: PhotoViewComputedScale.covered * 2,
+            errorBuilder: (context, error, stackTrace) {
+              return const Center(
+                child: Icon(
+                  Icons.broken_image,
+                  color: Colors.white,
+                  size: 64,
+                ),
+              );
+            },
+          );
+        },
+        onPageChanged: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        scrollPhysics: const BouncingScrollPhysics(),
+        backgroundDecoration: const BoxDecoration(color: Colors.black),
+        loadingBuilder: (context, event) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
 
 
