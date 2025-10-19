@@ -57,20 +57,19 @@ class NotificationService {
     if (parts.length < 2) return;
 
     final type = parts[0]; // 'task' or 'habit'
-    final id = int.tryParse(parts[1]);
-    if (id == null) return;
+    final id = parts[1];
 
     final database = AppDatabase();
 
     if (type == 'task' && response.actionId == 'mark_complete') {
       // Mark task as complete
-      final todo = await database.getTodoById(id);
+      final todo = await database.getTodoByUuid(id);
       if (todo != null) {
         await database.updateTodo(todo.copyWith(completed: true));
       }
     } else if (type == 'habit' && response.actionId == 'log_habit') {
       // Log habit for today
-      final habit = await database.getHabitById(id);
+      final habit = await database.getHabitByUuid(id);
       if (habit != null) {
         final now = DateTime.now();
         final goalValue = habit.goalType == 'boolean' ? 1.0 : (habit.goalValue ?? 1.0);
@@ -121,7 +120,7 @@ class NotificationService {
       tz.TZDateTime.from(scheduledTime, tz.local),
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: 'task|${task.id}',
+      payload: 'task|${task.uuid}',
     );
   }
 
@@ -164,7 +163,7 @@ class NotificationService {
       tz.TZDateTime.from(scheduledTime, tz.local),
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: 'habit|${habit.id}',
+      payload: 'habit|${habit.uuid}',
     );
   }
 

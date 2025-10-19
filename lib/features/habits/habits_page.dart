@@ -458,7 +458,7 @@ class _BooleanHabitControl extends StatelessWidget {
     if (isCompleted && log != null) {
       database.deleteHabitLogById(log!.id);
     } else {
-      database.upsertHabitLog(habit.id, DateTime.now(), 1);
+      database.upsertHabitLog(habit.uuid, DateTime.now(), 1);
     }
   }
 
@@ -590,7 +590,11 @@ class _UnitHabitControl extends StatelessWidget {
                     onPressed: () {
                       final amount = double.tryParse(controller.text);
                       if (amount == null || amount <= 0) return;
-                      database.upsertHabitLog(habit.id, DateTime.now(), amount);
+                      database.upsertHabitLog(
+                        habit.uuid,
+                        DateTime.now(),
+                        amount,
+                      );
                       Navigator.pop(context);
                     },
                     child: const Text('Save'),

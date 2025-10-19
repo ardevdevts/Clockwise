@@ -24,7 +24,8 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   bool _isSidebarOpen = false;
   bool _isSelectionMode = false;
   final Set<int> _selectedNoteIds = {};
-  final Set<int> _expandedFolderIds = {}; // Track which folders are expanded
+  final Set<String> _expandedFolderIds =
+      {}; // Track which folders are expanded (using UUID)
 
   @override
   void dispose() {
@@ -211,10 +212,10 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               color: AppColors.textSecondary,
             ),
             label: 'Pinned',
-            isSelected: selectedFolder == -1,
+            isSelected: selectedFolder == 'pinned',
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state =
-                  -1; // Special: pinned
+                  'pinned'; // Special: pinned
             },
           ),
           _buildSidebarItem(
@@ -224,10 +225,10 @@ class _NotesPageState extends ConsumerState<NotesPage> {
               color: AppColors.textSecondary,
             ),
             label: 'Favorites',
-            isSelected: selectedFolder == -2,
+            isSelected: selectedFolder == 'favorites',
             onTap: () {
               ref.read(selectedFolderProvider.notifier).state =
-                  -2; // Special: favorites
+                  'favorites'; // Special: favorites
             },
           ),
 
@@ -313,32 +314,38 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   // Build hierarchical folder tree
   Widget _buildFolderTree(List<NoteFolder> allFolders) {
     // Organize folders by parent
-    final Map<int?, List<NoteFolder>> foldersByParent = {};
+    final Map<String?, List<NoteFolder>> foldersByParent = {};
     for (final folder in allFolders) {
-      foldersByParent.putIfAbsent(folder.parentId, () => []).add(folder);
+      foldersByParent.putIfAbsent(folder.parentUuid, () => []).add(folder);
     }
-    
-    // Build tree starting from root folders (parentId == null)
+
+    // Build tree starting from root folders (parentUuid == null)
     final rootFolders = foldersByParent[null] ?? [];
-    
+
     return ListView(
-      children: rootFolders.map((folder) => _buildFolderTreeItem(folder, foldersByParent, 0)).toList(),
+      children: rootFolders
+          .map((folder) => _buildFolderTreeItem(folder, foldersByParent, 0))
+          .toList(),
     );
   }
 
-  Widget _buildFolderTreeItem(NoteFolder folder, Map<int?, List<NoteFolder>> foldersByParent, int depth) {
+  Widget _buildFolderTreeItem(
+    NoteFolder folder,
+    Map<String?, List<NoteFolder>> foldersByParent,
+    int depth,
+  ) {
     final selectedFolder = ref.watch(selectedFolderProvider);
-    final isSelected = selectedFolder == folder.id;
-    final hasChildren = foldersByParent[folder.id]?.isNotEmpty ?? false;
-    final isExpanded = _expandedFolderIds.contains(folder.id);
-    final children = foldersByParent[folder.id] ?? [];
+    final isSelected = selectedFolder == folder.uuid;
+    final hasChildren = foldersByParent[folder.uuid]?.isNotEmpty ?? false;
+    final isExpanded = _expandedFolderIds.contains(folder.uuid);
+    final children = foldersByParent[folder.uuid] ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
           onTap: () {
-            ref.read(selectedFolderProvider.notifier).state = folder.id;
+            ref.read(selectedFolderProvider.notifier).state = folder.uuid;
             _toggleSidebar(); // Close sidebar after selection
           },
           onLongPress: () => _showFolderContextMenu(context, folder),
@@ -357,9 +364,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                     onTap: () {
                       setState(() {
                         if (isExpanded) {
-                          _expandedFolderIds.remove(folder.id);
+                          _expandedFolderIds.remove(folder.uuid);
                         } else {
-                          _expandedFolderIds.add(folder.id);
+                          _expandedFolderIds.add(folder.uuid);
                         }
                       });
                     },
@@ -400,7 +407,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
           ),
         ),
         if (hasChildren && isExpanded)
-          ...children.map((child) => _buildFolderTreeItem(child, foldersByParent, depth + 1)),
+          ...children.map(
+            (child) => _buildFolderTreeItem(child, foldersByParent, depth + 1),
+          ),
       ],
     );
   }
@@ -467,11 +476,17 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     );
   }
 
-  Future<void> _deleteFolder(BuildContext context, AppDatabase database, NoteFolder folder) async {
+  Future<void> _deleteFolder(
+    BuildContext context,
+    AppDatabase database,
+    NoteFolder folder,
+  ) async {
     // Check if folder has subfolders
     final allFolders = await database.allNoteFolders;
-    final subfolders = allFolders.where((f) => f.parentId == folder.id).toList();
-    
+    final subfolders = allFolders
+        .where((f) => f.parentUuid == folder.uuid)
+        .toList();
+
     final confirmed = await showDialog<bool>(
       context: context,
       barrierColor: Colors.black87,
@@ -505,9 +520,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
 
     if (confirmed == true) {
       // Delete all subfolders recursively first
-      await _deleteSubfoldersRecursively(database, folder.id);
+      await _deleteSubfoldersRecursively(database, folder.uuid);
       // Delete all notes in this folder
-      final notesInFolder = await database.getNotesByFolder(folder.id);
+      final notesInFolder = await database.getNotesByFolder(folder.uuid);
       for (final note in notesInFolder) {
         await database.deleteNote(note.id);
       }
@@ -516,15 +531,20 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     }
   }
 
-  Future<void> _deleteSubfoldersRecursively(AppDatabase database, int parentFolderId) async {
+  Future<void> _deleteSubfoldersRecursively(
+    AppDatabase database,
+    String? parentFolderUuid,
+  ) async {
     final allFolders = await database.allNoteFolders;
-    final subfolders = allFolders.where((f) => f.parentId == parentFolderId).toList();
-    
+    final subfolders = allFolders
+        .where((f) => f.parentUuid == parentFolderUuid)
+        .toList();
+
     for (final subfolder in subfolders) {
       // Recursively delete subfolders of this subfolder
-      await _deleteSubfoldersRecursively(database, subfolder.id);
+      await _deleteSubfoldersRecursively(database, subfolder.uuid);
       // Delete all notes in this subfolder
-      final notesInFolder = await database.getNotesByFolder(subfolder.id);
+      final notesInFolder = await database.getNotesByFolder(subfolder.uuid);
       for (final note in notesInFolder) {
         await database.deleteNote(note.id);
       }
@@ -533,10 +553,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     }
   }
 
-  Widget _buildMainContent(
-    AppDatabase database,
-    int? selectedFolder,
-  ) {
+  Widget _buildMainContent(AppDatabase database, String? selectedFolder) {
     return Column(
       children: [
         // Header with menu button and search bar
@@ -655,32 +672,21 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     );
   }
 
-  Widget _buildNotesList(
-    AppDatabase database,
-    int? selectedFolder,
-  ) {
-    final source = _getNotesSource(
-      database,
-      selectedFolder,
-      _searchQuery,
-    );
+  Widget _buildNotesList(AppDatabase database, String? selectedFolder) {
+    final source = _getNotesSource(database, selectedFolder, _searchQuery);
     return _notesGridDataLoader(source: source, database: database);
   }
 
   // Helper to determine the data source (Future or Stream)
-  Object _getNotesSource(
-    AppDatabase database,
-    int? folder,
-    String query,
-  ) {
+  Object _getNotesSource(AppDatabase database, String? folder, String query) {
     if (query.isNotEmpty) {
       return database.searchNotes(query);
     }
-    if (folder == -1) {
+    if (folder == 'pinned') {
       // Pinned
       return database.getPinnedNotes();
     }
-    if (folder == -2) {
+    if (folder == 'favorites') {
       // Favorites
       return database.getFavoriteNotes();
     }
@@ -833,11 +839,11 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                       children: [
                         // Task badge
                         FutureBuilder<int>(
-                          future: database.getLinkedTodosCount(note.id),
+                          future: database.getLinkedTodosCount(note.uuid),
                           builder: (context, snapshot) {
                             final todoCount = snapshot.data ?? 0;
                             if (todoCount == 0) return const SizedBox.shrink();
-                            
+
                             return Padding(
                               padding: const EdgeInsets.only(right: 4),
                               child: Container(
@@ -846,7 +852,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.accentBlue.withValues(alpha: 0.2),
+                                  color: AppColors.accentBlue.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                     color: AppColors.accentBlue,
@@ -1005,10 +1013,10 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     }
   }
 
-  void _createNewNote(BuildContext context, int? folderId) {
+  void _createNewNote(BuildContext context, String? folderUuid) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => NoteEditorPage(folderId: folderId),
+        builder: (context) => NoteEditorPage(folderUuid: folderUuid),
       ),
     );
   }
@@ -1019,7 +1027,11 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     ).push(MaterialPageRoute(builder: (context) => NoteEditorPage(note: note)));
   }
 
-  void _showAddFolderDialog(BuildContext context, AppDatabase database, {NoteFolder? parentFolder}) {
+  void _showAddFolderDialog(
+    BuildContext context,
+    AppDatabase database, {
+    NoteFolder? parentFolder,
+  }) {
     final nameController = TextEditingController();
     String selectedColor = '00ADEF';
 
@@ -1029,7 +1041,9 @@ class _NotesPageState extends ConsumerState<NotesPage> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: Text(
-          parentFolder != null ? 'New Subfolder in ${parentFolder.name}' : 'New Folder',
+          parentFolder != null
+              ? 'New Subfolder in ${parentFolder.name}'
+              : 'New Folder',
           style: const TextStyle(color: AppColors.textPrimary, fontSize: 18),
         ),
         content: Column(
@@ -1067,14 +1081,14 @@ class _NotesPageState extends ConsumerState<NotesPage> {
                   NoteFoldersCompanion.insert(
                     name: nameController.text.trim(),
                     color: drift.Value(selectedColor),
-                    parentId: drift.Value(parentFolder?.id),
+                    parentUuid: drift.Value(parentFolder?.uuid),
                   ),
                 );
                 if (context.mounted) Navigator.of(context).pop();
                 // Expand parent folder if creating a subfolder
                 if (parentFolder != null) {
                   setState(() {
-                    _expandedFolderIds.add(parentFolder.id);
+                    _expandedFolderIds.add(parentFolder.uuid);
                   });
                 }
               }

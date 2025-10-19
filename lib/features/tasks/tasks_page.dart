@@ -36,9 +36,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
         child: StreamBuilder<List<Project>>(
           stream: database.watchProjects(),
           builder: (context, snapshot) {
-            final isLoading = !snapshot.hasData && 
-                             snapshot.connectionState == ConnectionState.waiting;
-            
+            final isLoading =
+                !snapshot.hasData &&
+                snapshot.connectionState == ConnectionState.waiting;
+
             if (isLoading) {
               return const Center(
                 child: CircularProgressIndicator(
@@ -70,10 +71,16 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         ),
                         // Sort button
                         PopupMenuButton<String>(
-                          icon: HugeIcon(icon: HugeIcons.strokeRoundedSorting01, color: AppColors.textSecondary, size: 24),
+                          icon: HugeIcon(
+                            icon: HugeIcons.strokeRoundedSorting01,
+                            color: AppColors.textSecondary,
+                            size: 24,
+                          ),
                           color: AppColors.elevatedSurface,
                           elevation: 8,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           onSelected: (value) {
                             setState(() => _sortBy = value);
                           },
@@ -82,9 +89,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'created',
                               child: Row(
                                 children: [
-                                  HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedClock01,
+                                    size: 18,
+                                    color: _sortBy == 'created'
+                                        ? AppColors.accentBlue
+                                        : AppColors.textSecondary,
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text('Recent', style: TextStyle(color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textPrimary)),
+                                  Text(
+                                    'Recent',
+                                    style: TextStyle(
+                                      color: _sortBy == 'created'
+                                          ? AppColors.accentBlue
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -92,9 +112,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'name',
                               child: Row(
                                 children: [
-                                  HugeIcon(icon: HugeIcons.strokeRoundedSortingAZ01, size: 18, color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedSortingAZ01,
+                                    size: 18,
+                                    color: _sortBy == 'name'
+                                        ? AppColors.accentBlue
+                                        : AppColors.textSecondary,
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text('Name', style: TextStyle(color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textPrimary)),
+                                  Text(
+                                    'Name',
+                                    style: TextStyle(
+                                      color: _sortBy == 'name'
+                                          ? AppColors.accentBlue
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -102,9 +135,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'progress',
                               child: Row(
                                 children: [
-                                  HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01, size: 18, color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedArrowUp01,
+                                    size: 18,
+                                    color: _sortBy == 'progress'
+                                        ? AppColors.accentBlue
+                                        : AppColors.textSecondary,
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text('Progress', style: TextStyle(color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textPrimary)),
+                                  Text(
+                                    'Progress',
+                                    style: TextStyle(
+                                      color: _sortBy == 'progress'
+                                          ? AppColors.accentBlue
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -179,10 +225,16 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                         ),
                         // Sort button
                         PopupMenuButton<String>(
-                          icon: HugeIcon(icon: HugeIcons.strokeRoundedSorting01, color: AppColors.textSecondary, size: 24),
+                          icon: HugeIcon(
+                            icon: HugeIcons.strokeRoundedSorting01,
+                            color: AppColors.textSecondary,
+                            size: 24,
+                          ),
                           color: AppColors.elevatedSurface,
                           elevation: 8,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           onSelected: (value) {
                             setState(() => _sortBy = value);
                           },
@@ -191,9 +243,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'created',
                               child: Row(
                                 children: [
-                                  HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedClock01,
+                                    size: 18,
+                                    color: _sortBy == 'created'
+                                        ? AppColors.accentBlue
+                                        : AppColors.textSecondary,
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text('Recent', style: TextStyle(color: _sortBy == 'created' ? AppColors.accentBlue : AppColors.textPrimary)),
+                                  Text(
+                                    'Recent',
+                                    style: TextStyle(
+                                      color: _sortBy == 'created'
+                                          ? AppColors.accentBlue
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -201,9 +266,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'name',
                               child: Row(
                                 children: [
-                                  HugeIcon(icon: HugeIcons.strokeRoundedSortingAZ01, size: 18, color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedSortingAZ01,
+                                    size: 18,
+                                    color: _sortBy == 'name'
+                                        ? AppColors.accentBlue
+                                        : AppColors.textSecondary,
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text('Name', style: TextStyle(color: _sortBy == 'name' ? AppColors.accentBlue : AppColors.textPrimary)),
+                                  Text(
+                                    'Name',
+                                    style: TextStyle(
+                                      color: _sortBy == 'name'
+                                          ? AppColors.accentBlue
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -211,9 +289,22 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                               value: 'progress',
                               child: Row(
                                 children: [
-                                  HugeIcon(icon: HugeIcons.strokeRoundedArrowUp01, size: 18, color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textSecondary),
+                                  HugeIcon(
+                                    icon: HugeIcons.strokeRoundedArrowUp01,
+                                    size: 18,
+                                    color: _sortBy == 'progress'
+                                        ? AppColors.accentBlue
+                                        : AppColors.textSecondary,
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text('Progress', style: TextStyle(color: _sortBy == 'progress' ? AppColors.accentBlue : AppColors.textPrimary)),
+                                  Text(
+                                    'Progress',
+                                    style: TextStyle(
+                                      color: _sortBy == 'progress'
+                                          ? AppColors.accentBlue
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -226,30 +317,33 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index.isOdd) {
-                          return const SizedBox(height: 16);
-                        }
-                        final projectIndex = index ~/ 2;
-                        final project = projects[projectIndex];
-                        return _ProjectCard(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      if (index.isOdd) {
+                        return const SizedBox(height: 16);
+                      }
+                      final projectIndex = index ~/ 2;
+                      final project = projects[projectIndex];
+                      return _ProjectCard(
+                        project: project,
+                        database: database,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProjectTasksPage(project: project),
+                            ),
+                          );
+                        },
+                        onEdit: () => _showProjectDialog(
+                          context,
+                          database,
                           project: project,
-                          database: database,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ProjectTasksPage(project: project),
-                              ),
-                            );
-                          },
-                          onEdit: () => _showProjectDialog(context, database, project: project),
-                          onDelete: () => _deleteProject(context, database, project),
-                        );
-                      },
-                      childCount: projects.length * 2 - 1,
-                    ),
+                        ),
+                        onDelete: () =>
+                            _deleteProject(context, database, project),
+                      );
+                    }, childCount: projects.length * 2 - 1),
                   ),
                 ),
               ],
@@ -260,20 +354,32 @@ class _TasksPageState extends ConsumerState<TasksPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showProjectDialog(context, database),
         backgroundColor: AppColors.accentBlue,
-        child: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: Colors.white),
+        child: HugeIcon(
+          icon: HugeIcons.strokeRoundedAdd01,
+          color: Colors.white,
+        ),
       ),
     );
   }
 
-  void _showProjectDialog(BuildContext context, AppDatabase database, {Project? project}) {
+  void _showProjectDialog(
+    BuildContext context,
+    AppDatabase database, {
+    Project? project,
+  }) {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (context) => _ProjectDialog(project: project, database: database),
+      builder: (context) =>
+          _ProjectDialog(project: project, database: database),
     );
   }
 
-  void _deleteProject(BuildContext context, AppDatabase database, Project project) {
+  void _deleteProject(
+    BuildContext context,
+    AppDatabase database,
+    Project project,
+  ) {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
@@ -305,7 +411,10 @@ class _TasksPageState extends ConsumerState<TasksPage> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   _MinimalButton(
@@ -355,15 +464,31 @@ class _ProjectDialogState extends State<_ProjectDialog> {
   ];
 
   final List<String> _availableIcons = [
-    '📁', '💼', '🎯', '🚀', '💡', '🎨', '📚', '🏆',
-    '⚡', '🔥', '🎮', '🎵', '🏋️', '🧪', '🌟', '✨',
+    '📁',
+    '💼',
+    '🎯',
+    '🚀',
+    '💡',
+    '🎨',
+    '📚',
+    '🏆',
+    '⚡',
+    '🔥',
+    '🎮',
+    '🎵',
+    '🏋️',
+    '🧪',
+    '🌟',
+    '✨',
   ];
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.project?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.project?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.project?.description ?? '',
+    );
     _selectedColor = widget.project?.color ?? '00ADEF';
     _selectedIcon = widget.project?.icon ?? '📁';
   }
@@ -400,7 +525,7 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // Icon Selector
               const Text(
                 'Icon',
@@ -426,10 +551,14 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                         width: 56,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: isSelected ? _hexToColor(_selectedColor).withOpacity(0.15) : AppColors.surface,
+                          color: isSelected
+                              ? _hexToColor(_selectedColor).withOpacity(0.15)
+                              : AppColors.surface,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isSelected ? _hexToColor(_selectedColor) : Colors.transparent,
+                            color: isSelected
+                                ? _hexToColor(_selectedColor)
+                                : Colors.transparent,
                             width: 2,
                           ),
                         ),
@@ -445,7 +574,7 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Color Selector
               const Text(
                 'Color',
@@ -475,14 +604,18 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                         ),
                       ),
                       child: isSelected
-                          ? HugeIcon(icon: HugeIcons.strokeRoundedTick02, color: Colors.white, size: 20)
+                          ? HugeIcon(
+                              icon: HugeIcons.strokeRoundedTick02,
+                              color: Colors.white,
+                              size: 20,
+                            )
                           : null,
                     ),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 20),
-              
+
               // Name Field
               _MinimalTextField(
                 controller: _nameController,
@@ -490,7 +623,7 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                 autofocus: true,
               ),
               const SizedBox(height: 16),
-              
+
               // Description Field
               _MinimalTextField(
                 controller: _descriptionController,
@@ -498,7 +631,7 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                 maxLines: 3,
               ),
               const SizedBox(height: 24),
-              
+
               // Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -520,9 +653,11 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                         await widget.database.insertProject(
                           ProjectsCompanion.insert(
                             name: _nameController.text.trim(),
-                            description: drift.Value(_descriptionController.text.trim().isEmpty
-                                ? null
-                                : _descriptionController.text.trim()),
+                            description: drift.Value(
+                              _descriptionController.text.trim().isEmpty
+                                  ? null
+                                  : _descriptionController.text.trim(),
+                            ),
                             color: drift.Value(_selectedColor),
                             icon: drift.Value(_selectedIcon),
                           ),
@@ -531,9 +666,11 @@ class _ProjectDialogState extends State<_ProjectDialog> {
                         await widget.database.updateProject(
                           widget.project!.copyWith(
                             name: _nameController.text.trim(),
-                            description: drift.Value(_descriptionController.text.trim().isEmpty
-                                ? null
-                                : _descriptionController.text.trim()),
+                            description: drift.Value(
+                              _descriptionController.text.trim().isEmpty
+                                  ? null
+                                  : _descriptionController.text.trim(),
+                            ),
                             color: _selectedColor,
                             icon: drift.Value(_selectedIcon),
                           ),
@@ -575,15 +712,15 @@ class _ProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Map<String, int>>(
-      stream: database.watchProjectStats(project.id),
+      stream: database.watchProjectStats(project.uuid),
       builder: (context, snapshot) {
         final stats = snapshot.data ?? {'total': 0, 'completed': 0};
         final total = stats['total'] ?? 0;
         final completed = stats['completed'] ?? 0;
         final progress = total > 0 ? completed / total : 0.0;
-        
+
         return Dismissible(
-          key: Key('project_${project.id}'),
+          key: Key('project_${project.uuid}'),
           direction: DismissDirection.endToStart,
           background: Container(
             alignment: Alignment.centerRight,
@@ -592,7 +729,11 @@ class _ProjectCard extends StatelessWidget {
               color: AppColors.error,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: Colors.white, size: 28),
+            child: HugeIcon(
+              icon: HugeIcons.strokeRoundedDelete02,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
           confirmDismiss: (direction) async {
             return await showDialog(
@@ -600,7 +741,9 @@ class _ProjectCard extends StatelessWidget {
               barrierColor: Colors.black87,
               builder: (context) => Dialog(
                 backgroundColor: AppColors.elevatedSurface,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -618,7 +761,10 @@ class _ProjectCard extends StatelessWidget {
                       const SizedBox(height: 16),
                       Text(
                         'Delete "${project.name}"?\nAll tasks will be removed.',
-                        style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          height: 1.5,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -626,7 +772,10 @@ class _ProjectCard extends StatelessWidget {
                         children: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           _MinimalButton(
@@ -669,7 +818,9 @@ class _ProjectCard extends StatelessWidget {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: _hexToColor(project.color).withOpacity(0.15),
+                              color: _hexToColor(
+                                project.color,
+                              ).withOpacity(0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Center(
@@ -680,7 +831,7 @@ class _ProjectCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 14),
-                          
+
                           // Title and description
                           Expanded(
                             child: Column(
@@ -695,7 +846,8 @@ class _ProjectCard extends StatelessWidget {
                                     letterSpacing: -0.3,
                                   ),
                                 ),
-                                if (project.description != null && project.description!.isNotEmpty) ...[
+                                if (project.description != null &&
+                                    project.description!.isNotEmpty) ...[
                                   const SizedBox(height: 4),
                                   Text(
                                     project.description!,
@@ -711,13 +863,19 @@ class _ProjectCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          
+
                           // More menu
                           PopupMenuButton<String>(
-                            icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreVertical, color: AppColors.textMuted, size: 22),
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedMoreVertical,
+                              color: AppColors.textMuted,
+                              size: 22,
+                            ),
                             color: AppColors.elevatedSurface,
                             elevation: 8,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             offset: const Offset(-12, 0),
                             onSelected: (value) {
                               if (value == 'edit') {
@@ -732,9 +890,16 @@ class _ProjectCard extends StatelessWidget {
                                 height: 44,
                                 child: Row(
                                   children: [
-                                    HugeIcon(icon: HugeIcons.strokeRoundedEdit02, size: 18, color: AppColors.textPrimary),
+                                    HugeIcon(
+                                      icon: HugeIcons.strokeRoundedEdit02,
+                                      size: 18,
+                                      color: AppColors.textPrimary,
+                                    ),
                                     SizedBox(width: 12),
-                                    Text('Edit', style: TextStyle(fontSize: 15)),
+                                    Text(
+                                      'Edit',
+                                      style: TextStyle(fontSize: 15),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -743,9 +908,19 @@ class _ProjectCard extends StatelessWidget {
                                 height: 44,
                                 child: Row(
                                   children: [
-                                    HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
+                                    HugeIcon(
+                                      icon: HugeIcons.strokeRoundedDelete02,
+                                      size: 18,
+                                      color: AppColors.error,
+                                    ),
                                     SizedBox(width: 12),
-                                    Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 15)),
+                                    Text(
+                                      'Delete',
+                                      style: TextStyle(
+                                        color: AppColors.error,
+                                        fontSize: 15,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -753,9 +928,9 @@ class _ProjectCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Progress bar
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -764,7 +939,9 @@ class _ProjectCard extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                total > 0 ? '$completed of $total tasks' : 'No tasks yet',
+                                total > 0
+                                    ? '$completed of $total tasks'
+                                    : 'No tasks yet',
                                 style: const TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 12,
@@ -788,18 +965,24 @@ class _ProjectCard extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: progress,
                               backgroundColor: AppColors.gray600,
-                              valueColor: AlwaysStoppedAnimation(_hexToColor(project.color)),
+                              valueColor: AlwaysStoppedAnimation(
+                                _hexToColor(project.color),
+                              ),
                               minHeight: 6,
                             ),
                           ),
                         ],
                       ),
-                      
+
                       // Last updated
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 14, color: AppColors.textMuted),
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedClock01,
+                            size: 14,
+                            color: AppColors.textMuted,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             _formatDate(project.createdAt),
@@ -824,7 +1007,7 @@ class _ProjectCard extends StatelessWidget {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'Created today';
     } else if (difference.inDays == 1) {
@@ -858,9 +1041,7 @@ class _ProjectItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 0.5),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 0.5)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -892,7 +1073,8 @@ class _ProjectItem extends StatelessWidget {
                           letterSpacing: -0.2,
                         ),
                       ),
-                      if (project.description != null && project.description!.isNotEmpty) ...[
+                      if (project.description != null &&
+                          project.description!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           project.description!,
@@ -909,15 +1091,22 @@ class _ProjectItem extends StatelessWidget {
                   ),
                 ),
                 PopupMenuButton<String>(
-                  icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreHorizontal, color: AppColors.textMuted, size: 20),
+                  icon: HugeIcon(
+                    icon: HugeIcons.strokeRoundedMoreHorizontal,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
                   color: AppColors.elevatedSurface,
                   elevation: 8,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   offset: const Offset(-12, 0),
                   onSelected: (value) {
                     if (value == 'edit') {
                       onEdit();
-                    } else if (value == 'delete') onDelete();
+                    } else if (value == 'delete')
+                      onDelete();
                   },
                   itemBuilder: (context) => [
                     PopupMenuItem(
@@ -925,7 +1114,11 @@ class _ProjectItem extends StatelessWidget {
                       height: 40,
                       child: Row(
                         children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedEdit02, size: 18, color: AppColors.textPrimary),
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedEdit02,
+                            size: 18,
+                            color: AppColors.textPrimary,
+                          ),
                           const SizedBox(width: 12),
                           Text('Edit', style: TextStyle(fontSize: 15)),
                         ],
@@ -936,9 +1129,19 @@ class _ProjectItem extends StatelessWidget {
                       height: 40,
                       child: Row(
                         children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedDelete02,
+                            size: 18,
+                            color: AppColors.error,
+                          ),
                           const SizedBox(width: 12),
-                          Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 15)),
+                          Text(
+                            'Delete',
+                            style: TextStyle(
+                              color: AppColors.error,
+                              fontSize: 15,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -976,7 +1179,11 @@ class ProjectTasksPage extends ConsumerWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: AppColors.textPrimary, size: 20),
+                    icon: HugeIcon(
+                      icon: HugeIcons.strokeRoundedArrowLeft01,
+                      color: AppColors.textPrimary,
+                      size: 20,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -993,8 +1200,13 @@ class ProjectTasksPage extends ConsumerWidget {
                     ),
                   ),
                   IconButton(
-                    onPressed: () => _showTaskDialog(context, database, project.id),
-                    icon: HugeIcon(icon: HugeIcons.strokeRoundedAdd01, color: AppColors.textPrimary, size: 28),
+                    onPressed: () =>
+                        _showTaskDialog(context, database, project.uuid),
+                    icon: HugeIcon(
+                      icon: HugeIcons.strokeRoundedAdd01,
+                      color: AppColors.textPrimary,
+                      size: 28,
+                    ),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -1005,12 +1217,13 @@ class ProjectTasksPage extends ConsumerWidget {
             // Tasks List
             Expanded(
               child: StreamBuilder<List<Todo>>(
-                stream: database.watchRootTasksByProject(project.id),
+                stream: database.watchRootTasksByProject(project.uuid),
                 builder: (context, snapshot) {
                   // Show loading only if waiting AND no data yet
-                  final isLoading = !snapshot.hasData && 
-                                   snapshot.connectionState == ConnectionState.waiting;
-                  
+                  final isLoading =
+                      !snapshot.hasData &&
+                      snapshot.connectionState == ConnectionState.waiting;
+
                   if (isLoading) {
                     return const Center(
                       child: CircularProgressIndicator(
@@ -1027,11 +1240,18 @@ class ProjectTasksPage extends ConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkCircle02, size: 48, color: AppColors.gray500),
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedCheckmarkCircle02,
+                            size: 48,
+                            color: AppColors.gray500,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'No tasks',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 16,
+                            ),
                           ),
                         ],
                       ),
@@ -1039,7 +1259,10 @@ class ProjectTasksPage extends ConsumerWidget {
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 8,
+                    ),
                     itemCount: tasks.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 1),
                     itemBuilder: (context, index) {
@@ -1069,7 +1292,12 @@ class ProjectTasksPage extends ConsumerWidget {
     );
   }
 
-  void _showTaskDialog(BuildContext context, AppDatabase database, int projectId, {int? parentId}) {
+  void _showTaskDialog(
+    BuildContext context,
+    AppDatabase database,
+    String projectUuid, {
+    String? parentUuid,
+  }) {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     Priority selectedPriority = Priority.medium;
@@ -1118,7 +1346,10 @@ class ProjectTasksPage extends ConsumerWidget {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     _MinimalButton(
@@ -1127,12 +1358,14 @@ class ProjectTasksPage extends ConsumerWidget {
                         if (titleController.text.trim().isEmpty) return;
                         await database.insertTodo(
                           TodosCompanion.insert(
-                            projectId: projectId,
-                            parentId: drift.Value(parentId),
+                            projectUuid: projectUuid,
+                            parentUuid: drift.Value(parentUuid),
                             title: titleController.text.trim(),
-                            description: drift.Value(descriptionController.text.trim().isEmpty
-                                ? null
-                                : descriptionController.text.trim()),
+                            description: drift.Value(
+                              descriptionController.text.trim().isEmpty
+                                  ? null
+                                  : descriptionController.text.trim(),
+                            ),
                             priority: selectedPriority,
                           ),
                         );
@@ -1186,7 +1419,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   decoration: BoxDecoration(
                     color: AppColors.background,
                     border: Border(
-                      bottom: BorderSide(color: AppColors.border.withOpacity(0.3), width: 1),
+                      bottom: BorderSide(
+                        color: AppColors.border.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -1196,17 +1432,30 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                         children: [
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowLeft01, color: AppColors.textPrimary, size: 20),
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedArrowLeft01,
+                              color: AppColors.textPrimary,
+                              size: 20,
+                            ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
                           const Spacer(),
                           IconButton(
-                            onPressed: () => _showEditTaskDialog(context, database),
-                            icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: AppColors.accentBlue, size: 22),
+                            onPressed: () =>
+                                _showEditTaskDialog(context, database),
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedEdit02,
+                              color: AppColors.accentBlue,
+                              size: 22,
+                            ),
                           ),
                           PopupMenuButton<String>(
-                            icon: HugeIcon(icon: HugeIcons.strokeRoundedMoreVertical, color: AppColors.textSecondary, size: 22),
+                            icon: HugeIcon(
+                              icon: HugeIcons.strokeRoundedMoreVertical,
+                              color: AppColors.textSecondary,
+                              size: 22,
+                            ),
                             color: AppColors.elevatedSurface,
                             onSelected: (value) {
                               if (value == 'delete') {
@@ -1218,9 +1467,16 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: AppColors.error, size: 20),
+                                    HugeIcon(
+                                      icon: HugeIcons.strokeRoundedDelete02,
+                                      color: AppColors.error,
+                                      size: 20,
+                                    ),
                                     SizedBox(width: 12),
-                                    Text('Delete Task', style: TextStyle(color: AppColors.error)),
+                                    Text(
+                                      'Delete Task',
+                                      style: TextStyle(color: AppColors.error),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1233,7 +1489,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              database.updateTodo(task.copyWith(completed: !task.completed));
+                              database.updateTodo(
+                                task.copyWith(completed: !task.completed),
+                              );
                             },
                             child: Container(
                               width: 28,
@@ -1241,13 +1499,21 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: task.completed ? AppColors.accentBlue : AppColors.border,
+                                  color: task.completed
+                                      ? AppColors.accentBlue
+                                      : AppColors.border,
                                   width: 2.5,
                                 ),
-                                color: task.completed ? AppColors.accentBlue : Colors.transparent,
+                                color: task.completed
+                                    ? AppColors.accentBlue
+                                    : Colors.transparent,
                               ),
                               child: task.completed
-                                  ? HugeIcon(icon: HugeIcons.strokeRoundedTick02, size: 18, color: AppColors.background)
+                                  ? HugeIcon(
+                                      icon: HugeIcons.strokeRoundedTick02,
+                                      size: 18,
+                                      color: AppColors.background,
+                                    )
                                   : null,
                             ),
                           ),
@@ -1260,7 +1526,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: -0.3,
-                                decoration: task.completed ? TextDecoration.lineThrough : null,
+                                decoration: task.completed
+                                    ? TextDecoration.lineThrough
+                                    : null,
                                 decorationColor: AppColors.textMuted,
                               ),
                             ),
@@ -1280,9 +1548,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 12),
-                        
+
                         // Description Card
-                        if (task.description != null && task.description!.isNotEmpty)
+                        if (task.description != null &&
+                            task.description!.isNotEmpty)
                           _SectionCard(
                             child: Padding(
                               padding: const EdgeInsets.all(16),
@@ -1303,7 +1572,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                           task: task,
                           remindersListKey: _remindersListKey,
                           onAddReminder: () async {
-                            final saved = await _showAddReminderDialog(context, ref);
+                            final saved = await _showAddReminderDialog(
+                              context,
+                              ref,
+                            );
                             if (saved) {
                               _remindersListKey.currentState?._loadReminders();
                             }
@@ -1318,14 +1590,16 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
                         // Links Section
                         _LinksSection(
-                          taskId: task.id,
-                          onAddLink: () => _showAddLinkDialog(context, database),
+                          taskUuid: task.uuid,
+                          onAddLink: () =>
+                              _showAddLinkDialog(context, database),
                         ),
 
                         // Images Section
                         _ImagesSection(
-                          taskId: task.id,
-                          onAddImage: () => _showAddImageDialog(context, database),
+                          taskUuid: task.uuid,
+                          onAddImage: () =>
+                              _showAddImageDialog(context, database),
                         ),
 
                         // Subtasks Section
@@ -1333,7 +1607,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                           task: task,
                           database: database,
                           project: widget.project,
-                          onAddSubtask: () => _showSubtaskDialog(context, database),
+                          onAddSubtask: () =>
+                              _showSubtaskDialog(context, database),
                         ),
 
                         const SizedBox(height: 24),
@@ -1348,24 +1623,29 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       },
     );
   }
-  
-  Future<void> _showNotesDialog(BuildContext context, AppDatabase database) async {
+
+  Future<void> _showNotesDialog(
+    BuildContext context,
+    AppDatabase database,
+  ) async {
     // If task already has a linked note, navigate to edit it
-    if (widget.task.noteId != null) {
-      final note = await database.getNoteById(widget.task.noteId!);
+    if (widget.task.noteUuid != null) {
+      final note = await database.getNoteByUuid(widget.task.noteUuid!);
       if (note != null && context.mounted) {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => NoteEditorPage(note: note),
-          ),
+          MaterialPageRoute(builder: (context) => NoteEditorPage(note: note)),
         );
         return;
       }
     }
 
     // Otherwise, create a new note
-    final titleController = TextEditingController(text: 'Note for: ${widget.task.title}');
-    final notesController = TextEditingController(text: widget.task.notes ?? '');
+    final titleController = TextEditingController(
+      text: 'Note for: ${widget.task.title}',
+    );
+    final notesController = TextEditingController(
+      text: widget.task.notes ?? '',
+    );
 
     showDialog(
       context: context,
@@ -1406,7 +1686,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppColors.accentBlue,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -1432,7 +1715,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppColors.accentBlue,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -1442,7 +1728,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
@@ -1462,11 +1751,18 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                         ),
                       );
 
+                      // Get the newly created note to access its UUID
+                      final newNote = await database.getNoteById(noteId);
+
                       // Link the note to the task
                       await database.updateTodo(
                         widget.task.copyWith(
-                          noteId: drift.Value(noteId),
-                          notes: drift.Value(notesController.text.trim().isEmpty ? null : notesController.text.trim()),
+                          noteUuid: drift.Value(newNote!.uuid),
+                          notes: drift.Value(
+                            notesController.text.trim().isEmpty
+                                ? null
+                                : notesController.text.trim(),
+                          ),
                         ),
                       );
 
@@ -1475,8 +1771,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentBlue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: const Text('Create Note'),
                   ),
@@ -1534,7 +1835,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppColors.accentBlue,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -1559,7 +1863,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.accentBlue, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppColors.accentBlue,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -1569,7 +1876,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
@@ -1577,11 +1887,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       if (urlController.text.trim().isEmpty) return;
                       await database.insertTodoLink(
                         TodoLinksCompanion.insert(
-                          todoId: widget.task.id,
+                          todoUuid: widget.task.uuid,
                           url: urlController.text.trim(),
-                          title: drift.Value(titleController.text.trim().isEmpty
-                              ? null
-                              : titleController.text.trim()),
+                          title: drift.Value(
+                            titleController.text.trim().isEmpty
+                                ? null
+                                : titleController.text.trim(),
+                          ),
                         ),
                       );
                       if (context.mounted) Navigator.pop(context);
@@ -1589,8 +1901,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentBlue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: const Text('Add'),
                   ),
@@ -1605,7 +1922,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
   void _showAddImageDialog(BuildContext context, AppDatabase database) async {
     final ImagePicker picker = ImagePicker();
-    
+
     showDialog(
       context: context,
       barrierColor: Colors.black87,
@@ -1635,11 +1952,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     label: 'Camera',
                     onTap: () async {
                       Navigator.pop(context);
-                      final XFile? image = await picker.pickImage(source: ImageSource.camera);
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.camera,
+                      );
                       if (image != null) {
                         await database.insertTodoImage(
                           TodoImagesCompanion.insert(
-                            todoId: widget.task.id,
+                            todoUuid: widget.task.uuid,
                             imagePath: image.path,
                           ),
                         );
@@ -1651,11 +1970,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     label: 'Gallery',
                     onTap: () async {
                       Navigator.pop(context);
-                      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.gallery,
+                      );
                       if (image != null) {
                         await database.insertTodoImage(
                           TodoImagesCompanion.insert(
-                            todoId: widget.task.id,
+                            todoUuid: widget.task.uuid,
                             imagePath: image.path,
                           ),
                         );
@@ -1673,7 +1994,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
   void _showEditTaskDialog(BuildContext context, AppDatabase database) {
     final titleController = TextEditingController(text: widget.task.title);
-    final descriptionController = TextEditingController(text: widget.task.description ?? '');
+    final descriptionController = TextEditingController(
+      text: widget.task.description ?? '',
+    );
     Priority selectedPriority = widget.task.priority;
 
     showDialog(
@@ -1719,7 +2042,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     _MinimalButton(
@@ -1729,9 +2055,11 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                         await database.updateTodo(
                           widget.task.copyWith(
                             title: titleController.text.trim(),
-                            description: drift.Value(descriptionController.text.trim().isEmpty
-                                ? null
-                                : descriptionController.text.trim()),
+                            description: drift.Value(
+                              descriptionController.text.trim().isEmpty
+                                  ? null
+                                  : descriptionController.text.trim(),
+                            ),
                             priority: selectedPriority,
                           ),
                         );
@@ -1797,7 +2125,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     _MinimalButton(
@@ -1806,12 +2137,14 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                         if (titleController.text.trim().isEmpty) return;
                         await database.insertTodo(
                           TodosCompanion.insert(
-                            projectId: widget.task.projectId,
-                            parentId: drift.Value(widget.task.id),
+                            projectUuid: widget.task.projectUuid,
+                            parentUuid: drift.Value(widget.task.uuid),
                             title: titleController.text.trim(),
-                            description: drift.Value(descriptionController.text.trim().isEmpty
-                                ? null
-                                : descriptionController.text.trim()),
+                            description: drift.Value(
+                              descriptionController.text.trim().isEmpty
+                                  ? null
+                                  : descriptionController.text.trim(),
+                            ),
                             priority: selectedPriority,
                           ),
                         );
@@ -1860,7 +2193,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   _MinimalButton(
@@ -1883,7 +2219,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     );
   }
 
-  Future<bool> _showAddReminderDialog(BuildContext context, WidgetRef ref) async {
+  Future<bool> _showAddReminderDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
 
@@ -1909,7 +2248,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Date selector
                 GestureDetector(
                   onTap: () async {
@@ -1935,7 +2274,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(6),
@@ -1943,19 +2285,26 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     ),
                     child: Row(
                       children: [
-                        HugeIcon(icon: HugeIcons.strokeRoundedCalendar03, size: 18, color: AppColors.textSecondary),
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedCalendar03,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           DateFormat('MMM dd, yyyy').format(selectedDate),
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Time selector
                 GestureDetector(
                   onTap: () async {
@@ -1979,7 +2328,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(6),
@@ -1987,30 +2339,42 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     ),
                     child: Row(
                       children: [
-                        HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: AppColors.textSecondary),
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedClock01,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           selectedTime.format(context),
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     _MinimalButton(
                       label: 'Add',
                       onPressed: () async {
-                        final reminderService = ref.read(reminderServiceProvider);
+                        final reminderService = ref.read(
+                          reminderServiceProvider,
+                        );
                         final reminderTime = DateTime(
                           selectedDate.year,
                           selectedDate.month,
@@ -2018,7 +2382,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                           selectedTime.hour,
                           selectedTime.minute,
                         );
-                        await reminderService.addTaskReminder(widget.task.id, reminderTime);
+                        await reminderService.addTaskReminder(
+                          widget.task.uuid,
+                          reminderTime,
+                        );
                         if (context.mounted) Navigator.pop(context, true);
                       },
                     ),
@@ -2030,7 +2397,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         ),
       ),
     );
-    
+
     return result ?? false;
   }
 }
@@ -2053,21 +2420,24 @@ class _TaskItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 0.5),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 0.5)),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: isSubtask ? 16 : 0),
+            padding: EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: isSubtask ? 16 : 0,
+            ),
             child: Row(
               children: [
                 GestureDetector(
                   onTap: () {
-                    database.updateTodo(task.copyWith(completed: !task.completed));
+                    database.updateTodo(
+                      task.copyWith(completed: !task.completed),
+                    );
                   },
                   child: Container(
                     width: 20,
@@ -2075,13 +2445,21 @@ class _TaskItem extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: task.completed ? AppColors.accentBlue : AppColors.border,
+                        color: task.completed
+                            ? AppColors.accentBlue
+                            : AppColors.border,
                         width: 2,
                       ),
-                      color: task.completed ? AppColors.accentBlue : Colors.transparent,
+                      color: task.completed
+                          ? AppColors.accentBlue
+                          : Colors.transparent,
                     ),
                     child: task.completed
-                        ? HugeIcon(icon: HugeIcons.strokeRoundedTick02, size: 12, color: AppColors.background)
+                        ? HugeIcon(
+                            icon: HugeIcons.strokeRoundedTick02,
+                            size: 12,
+                            color: AppColors.background,
+                          )
                         : null,
                   ),
                 ),
@@ -2096,11 +2474,14 @@ class _TaskItem extends StatelessWidget {
                           color: AppColors.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.w400,
-                          decoration: task.completed ? TextDecoration.lineThrough : null,
+                          decoration: task.completed
+                              ? TextDecoration.lineThrough
+                              : null,
                           decorationColor: AppColors.textMuted,
                         ),
                       ),
-                      if (task.description != null && task.description!.isNotEmpty) ...[
+                      if (task.description != null &&
+                          task.description!.isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text(
                           task.description!,
@@ -2118,7 +2499,11 @@ class _TaskItem extends StatelessWidget {
                 const SizedBox(width: 8),
                 _priorityBadge(task.priority),
                 const SizedBox(width: 4),
-                HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: AppColors.textMuted, size: 18),
+                HugeIcon(
+                  icon: HugeIcons.strokeRoundedArrowRight01,
+                  color: AppColors.textMuted,
+                  size: 18,
+                ),
               ],
             ),
           ),
@@ -2148,10 +2533,7 @@ class _MinimalTextField extends StatelessWidget {
       controller: controller,
       autofocus: autofocus,
       maxLines: maxLines,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 16,
-      ),
+      style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: AppColors.textMuted),
@@ -2161,7 +2543,10 @@ class _MinimalTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -2183,7 +2568,9 @@ class _MinimalButton extends StatelessWidget {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        backgroundColor: isDestructive ? AppColors.error.withOpacity(0.15) : AppColors.accentBlue.withOpacity(0.15),
+        backgroundColor: isDestructive
+            ? AppColors.error.withOpacity(0.15)
+            : AppColors.accentBlue.withOpacity(0.15),
         foregroundColor: isDestructive ? AppColors.error : AppColors.accentBlue,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
@@ -2200,10 +2587,7 @@ class _PrioritySelector extends StatelessWidget {
   final Priority selected;
   final ValueChanged<Priority> onChanged;
 
-  const _PrioritySelector({
-    required this.selected,
-    required this.onChanged,
-  });
+  const _PrioritySelector({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -2222,7 +2606,10 @@ class _PrioritySelector extends StatelessWidget {
           }
         },
         underline: const SizedBox.shrink(),
-        icon: HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, color: AppColors.textSecondary),
+        icon: HugeIcon(
+          icon: HugeIcons.strokeRoundedArrowDown01,
+          color: AppColors.textSecondary,
+        ),
         dropdownColor: AppColors.elevatedSurface,
         isExpanded: true,
         items: Priority.values.map((priority) {
@@ -2408,7 +2795,11 @@ class _SectionHeader extends StatelessWidget {
           if (onEdit != null)
             IconButton(
               onPressed: onEdit,
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedEdit02, size: 20, color: AppColors.accentBlue),
+              icon: HugeIcon(
+                icon: HugeIcons.strokeRoundedEdit02,
+                size: 20,
+                color: AppColors.accentBlue,
+              ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -2416,7 +2807,11 @@ class _SectionHeader extends StatelessWidget {
             if (onEdit != null) const SizedBox(width: 12),
             IconButton(
               onPressed: onAdd,
-              icon: HugeIcon(icon: HugeIcons.strokeRoundedAddCircle, size: 22, color: AppColors.accentBlue),
+              icon: HugeIcon(
+                icon: HugeIcons.strokeRoundedAddCircle,
+                size: 22,
+                color: AppColors.accentBlue,
+              ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
             ),
@@ -2443,7 +2838,7 @@ class _RemindersSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _TaskRemindersList(
       key: remindersListKey,
-      taskId: task.id,
+      taskUuid: task.uuid,
       onAdd: onAddReminder,
     );
   }
@@ -2451,12 +2846,12 @@ class _RemindersSection extends ConsumerWidget {
 
 // Task Reminders List
 class _TaskRemindersList extends ConsumerStatefulWidget {
-  final int taskId;
+  final String taskUuid;
   final VoidCallback onAdd;
 
   const _TaskRemindersList({
     super.key,
-    required this.taskId,
+    required this.taskUuid,
     required this.onAdd,
   });
 
@@ -2475,7 +2870,7 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
 
   Future<void> _loadReminders() async {
     final reminderService = ref.read(reminderServiceProvider);
-    final reminders = await reminderService.getTaskReminders(widget.taskId);
+    final reminders = await reminderService.getTaskReminders(widget.taskUuid);
     if (mounted) {
       setState(() => _reminders = reminders);
     }
@@ -2499,7 +2894,8 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.all(12),
               itemCount: _reminders.length,
-              separatorBuilder: (_, __) => const Divider(height: 16, color: AppColors.border),
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 16, color: AppColors.border),
               itemBuilder: (context, index) {
                 final reminder = _reminders[index];
                 return Row(
@@ -2510,7 +2906,11 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
                         color: AppColors.accentTeal.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: HugeIcon(icon: HugeIcons.strokeRoundedClock01, size: 18, color: AppColors.accentTeal),
+                      child: HugeIcon(
+                        icon: HugeIcons.strokeRoundedClock01,
+                        size: 18,
+                        color: AppColors.accentTeal,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -2518,7 +2918,9 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            DateFormat('MMM dd, yyyy').format(reminder.remindAt),
+                            DateFormat(
+                              'MMM dd, yyyy',
+                            ).format(reminder.remindAt),
                             style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 14,
@@ -2536,11 +2938,17 @@ class _TaskRemindersListState extends ConsumerState<_TaskRemindersList> {
                       ),
                     ),
                     IconButton(
-                      icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
+                      icon: HugeIcon(
+                        icon: HugeIcons.strokeRoundedDelete02,
+                        size: 18,
+                        color: AppColors.error,
+                      ),
                       constraints: const BoxConstraints(),
                       padding: EdgeInsets.zero,
                       onPressed: () async {
-                        final reminderService = ref.read(reminderServiceProvider);
+                        final reminderService = ref.read(
+                          reminderServiceProvider,
+                        );
                         await reminderService.removeReminder(reminder.id);
                         await _loadReminders();
                       },
@@ -2561,15 +2969,12 @@ class _NotesSection extends ConsumerWidget {
   final Todo task;
   final VoidCallback onEdit;
 
-  const _NotesSection({
-    required this.task,
-    required this.onEdit,
-  });
+  const _NotesSection({required this.task, required this.onEdit});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final database = ref.watch(databaseProvider);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2578,14 +2983,14 @@ class _NotesSection extends ConsumerWidget {
           icon: Icons.note_outlined,
           onEdit: onEdit,
         ),
-        if (task.noteId != null)
+        if (task.noteUuid != null)
           FutureBuilder<Note?>(
-            future: database.getNoteById(task.noteId!),
+            future: database.getNoteByUuid(task.noteUuid!),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const SizedBox.shrink();
               }
-              
+
               final note = snapshot.data!;
               return _SectionCard(
                 child: InkWell(
@@ -2621,7 +3026,8 @@ class _NotesSection extends ConsumerWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (task.notes != null && task.notes!.isNotEmpty) ...[
+                              if (task.notes != null &&
+                                  task.notes!.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   task.notes!,
@@ -2657,20 +3063,17 @@ class _NotesSection extends ConsumerWidget {
 
 // Links Section
 class _LinksSection extends ConsumerWidget {
-  final int taskId;
+  final String taskUuid;
   final VoidCallback onAddLink;
 
-  const _LinksSection({
-    required this.taskId,
-    required this.onAddLink,
-  });
+  const _LinksSection({required this.taskUuid, required this.onAddLink});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final database = ref.watch(databaseProvider);
 
     return StreamBuilder<List<TodoLink>>(
-      stream: database.watchTodoLinks(taskId),
+      stream: database.watchTodoLinks(taskUuid),
       builder: (context, snapshot) {
         final links = snapshot.data ?? [];
 
@@ -2690,7 +3093,8 @@ class _LinksSection extends ConsumerWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(8),
                   itemCount: links.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.border),
                   itemBuilder: (context, index) {
                     final link = links[index];
                     return Material(
@@ -2699,7 +3103,10 @@ class _LinksSection extends ConsumerWidget {
                         onTap: () async {
                           final uri = Uri.parse(link.url);
                           if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
                           }
                         },
                         borderRadius: BorderRadius.circular(8),
@@ -2713,14 +3120,19 @@ class _LinksSection extends ConsumerWidget {
                                   color: AppColors.accentBlue.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: HugeIcon(icon: HugeIcons.strokeRoundedLinkSquare02, size: 16, color: AppColors.accentBlue),
+                                child: HugeIcon(
+                                  icon: HugeIcons.strokeRoundedLinkSquare02,
+                                  size: 16,
+                                  color: AppColors.accentBlue,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (link.title != null && link.title!.isNotEmpty)
+                                    if (link.title != null &&
+                                        link.title!.isNotEmpty)
                                       Text(
                                         link.title!,
                                         style: const TextStyle(
@@ -2734,7 +3146,9 @@ class _LinksSection extends ConsumerWidget {
                                     Text(
                                       link.url,
                                       style: TextStyle(
-                                        color: link.title != null && link.title!.isNotEmpty
+                                        color:
+                                            link.title != null &&
+                                                link.title!.isNotEmpty
                                             ? AppColors.textMuted
                                             : AppColors.textPrimary,
                                         fontSize: 13,
@@ -2746,7 +3160,11 @@ class _LinksSection extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, size: 18, color: AppColors.error),
+                                icon: HugeIcon(
+                                  icon: HugeIcons.strokeRoundedDelete02,
+                                  size: 18,
+                                  color: AppColors.error,
+                                ),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                                 onPressed: () async {
@@ -2771,20 +3189,17 @@ class _LinksSection extends ConsumerWidget {
 
 // Images Section
 class _ImagesSection extends ConsumerWidget {
-  final int taskId;
+  final String taskUuid;
   final VoidCallback onAddImage;
 
-  const _ImagesSection({
-    required this.taskId,
-    required this.onAddImage,
-  });
+  const _ImagesSection({required this.taskUuid, required this.onAddImage});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final database = ref.watch(databaseProvider);
 
     return StreamBuilder<List<TodoImage>>(
-      stream: database.watchTodoImages(taskId),
+      stream: database.watchTodoImages(taskUuid),
       builder: (context, snapshot) {
         final images = snapshot.data ?? [];
 
@@ -2804,11 +3219,12 @@ class _ImagesSection extends ConsumerWidget {
                   child: GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
                     itemCount: images.length,
                     itemBuilder: (context, index) {
                       final image = images[index];
@@ -2830,7 +3246,10 @@ class _ImagesSection extends ConsumerWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border.withOpacity(0.5), width: 1),
+                            border: Border.all(
+                              color: AppColors.border.withOpacity(0.5),
+                              width: 1,
+                            ),
                           ),
                           clipBehavior: Clip.antiAlias,
                           child: Stack(
@@ -2857,25 +3276,34 @@ class _ImagesSection extends ConsumerWidget {
                                     final confirmed = await showDialog<bool>(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        backgroundColor: AppColors.elevatedSurface,
+                                        backgroundColor:
+                                            AppColors.elevatedSurface,
                                         title: const Text(
                                           'Delete Image',
-                                          style: TextStyle(color: AppColors.textPrimary),
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary,
+                                          ),
                                         ),
                                         content: const Text(
                                           'Are you sure?',
-                                          style: TextStyle(color: AppColors.textSecondary),
+                                          style: TextStyle(
+                                            color: AppColors.textSecondary,
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
-                                            onPressed: () => Navigator.pop(context, false),
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
                                             child: const Text('Cancel'),
                                           ),
                                           TextButton(
-                                            onPressed: () => Navigator.pop(context, true),
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
                                             child: const Text(
                                               'Delete',
-                                              style: TextStyle(color: AppColors.error),
+                                              style: TextStyle(
+                                                color: AppColors.error,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -2932,7 +3360,7 @@ class _SubtasksSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<Todo>>(
-      stream: database.watchSubtasks(task.id),
+      stream: database.watchSubtasks(task.uuid),
       builder: (context, snapshot) {
         final subtasks = snapshot.data ?? [];
 
@@ -2952,7 +3380,8 @@ class _SubtasksSection extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(8),
                   itemCount: subtasks.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.border),
                   itemBuilder: (context, index) {
                     return _TaskItem(
                       task: subtasks[index],
@@ -3068,7 +3497,10 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
         title: Text('${_currentIndex + 1} / ${widget.images.length}'),
         actions: [
           IconButton(
-            icon: HugeIcon(icon: HugeIcons.strokeRoundedDelete02, color: Colors.white),
+            icon: HugeIcon(
+              icon: HugeIcons.strokeRoundedDelete02,
+              color: Colors.white,
+            ),
             onPressed: () async {
               final confirmed = await showDialog<bool>(
                 context: context,
@@ -3115,11 +3547,7 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
             maxScale: PhotoViewComputedScale.covered * 2,
             errorBuilder: (context, error, stackTrace) {
               return const Center(
-                child: Icon(
-                  Icons.broken_image,
-                  color: Colors.white,
-                  size: 64,
-                ),
+                child: Icon(Icons.broken_image, color: Colors.white, size: 64),
               );
             },
           );
@@ -3131,13 +3559,9 @@ class _ImageViewerPageState extends State<_ImageViewerPage> {
         },
         scrollPhysics: const BouncingScrollPhysics(),
         backgroundDecoration: const BoxDecoration(color: Colors.black),
-        loadingBuilder: (context, event) => const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
+        loadingBuilder: (context, event) =>
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
       ),
     );
   }
 }
-
-
-

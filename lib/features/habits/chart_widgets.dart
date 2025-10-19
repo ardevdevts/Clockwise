@@ -22,7 +22,9 @@ class ProgressChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final habit = habitWithDetails.habit;
-    final dailyLogsAsync = ref.watch(dailyHabitLogsProvider((habit.id, days)));
+    final dailyLogsAsync = ref.watch(
+      dailyHabitLogsProvider((habit.uuid, days)),
+    );
 
     return dailyLogsAsync.when(
       data: (dailyLogs) {
@@ -48,12 +50,18 @@ class ProgressChart extends ConsumerWidget {
         final List<FlSpot> spots = [];
 
         for (var i = 0; i < days; i++) {
-          final date = DateTime(startDate.year, startDate.month, startDate.day).add(Duration(days: i));
+          final date = DateTime(
+            startDate.year,
+            startDate.month,
+            startDate.day,
+          ).add(Duration(days: i));
           final value = dailyLogs[date] ?? 0.0;
           spots.add(FlSpot(i.toDouble(), value));
         }
 
-        final maxY = spots.isEmpty ? 10.0 : spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+        final maxY = spots.isEmpty
+            ? 10.0
+            : spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
         final adjustedMaxY = maxY == 0 ? 10.0 : maxY * 1.2;
 
         return Container(
@@ -71,10 +79,7 @@ class ProgressChart extends ConsumerWidget {
                 drawVerticalLine: false,
                 horizontalInterval: adjustedMaxY / 4,
                 getDrawingHorizontalLine: (value) {
-                  return FlLine(
-                    color: AppColors.border,
-                    strokeWidth: 0.5,
-                  );
+                  return FlLine(color: AppColors.border, strokeWidth: 0.5);
                 },
               ),
               titlesData: FlTitlesData(
@@ -93,8 +98,12 @@ class ProgressChart extends ConsumerWidget {
                     },
                   ),
                 ),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
@@ -150,7 +159,9 @@ class ProgressChart extends ConsumerWidget {
                   getTooltipColor: (spot) => AppColors.elevatedSurface,
                   getTooltipItems: (touchedSpots) {
                     return touchedSpots.map((spot) {
-                      final date = startDate.add(Duration(days: spot.x.toInt()));
+                      final date = startDate.add(
+                        Duration(days: spot.x.toInt()),
+                      );
                       return LineTooltipItem(
                         '${DateFormat('MMM d').format(date)}\n${spot.y.toStringAsFixed(1)} ${habit.goalUnit ?? ''}',
                         const TextStyle(
@@ -170,7 +181,10 @@ class ProgressChart extends ConsumerWidget {
       loading: () => const SizedBox(
         height: 200,
         child: Center(
-          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.textMuted,
+          ),
         ),
       ),
       error: (err, stack) => Center(child: Text('Error: $err')),
@@ -192,7 +206,7 @@ class WeeklyTrendChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final habit = habitWithDetails.habit;
-    final weeklyStatsAsync = ref.watch(weeklyHabitStatsProvider(habit.id));
+    final weeklyStatsAsync = ref.watch(weeklyHabitStatsProvider(habit.uuid));
 
     return weeklyStatsAsync.when(
       data: (weeklyStats) {
@@ -213,7 +227,12 @@ class WeeklyTrendChart extends ConsumerWidget {
           );
         }
 
-        final maxCount = weeklyStats.isEmpty ? 10.0 : weeklyStats.map((s) => s['count'] as int).reduce((a, b) => a > b ? a : b).toDouble();
+        final maxCount = weeklyStats.isEmpty
+            ? 10.0
+            : weeklyStats
+                  .map((s) => s['count'] as int)
+                  .reduce((a, b) => a > b ? a : b)
+                  .toDouble();
         final adjustedMaxY = maxCount == 0 ? 10.0 : maxCount * 1.2;
 
         return Container(
@@ -234,10 +253,7 @@ class WeeklyTrendChart extends ConsumerWidget {
                 drawVerticalLine: false,
                 horizontalInterval: adjustedMaxY / 4,
                 getDrawingHorizontalLine: (value) {
-                  return FlLine(
-                    color: AppColors.border,
-                    strokeWidth: 0.5,
-                  );
+                  return FlLine(color: AppColors.border, strokeWidth: 0.5);
                 },
               ),
               titlesData: FlTitlesData(
@@ -256,15 +272,21 @@ class WeeklyTrendChart extends ConsumerWidget {
                     },
                   ),
                 ),
-                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 30,
                     getTitlesWidget: (value, meta) {
-                      if (value.toInt() >= weeklyStats.length) return const Text('');
-                      final weekStart = weeklyStats[value.toInt()]['weekStart'] as DateTime;
+                      if (value.toInt() >= weeklyStats.length)
+                        return const Text('');
+                      final weekStart =
+                          weeklyStats[value.toInt()]['weekStart'] as DateTime;
                       return Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
@@ -290,7 +312,9 @@ class WeeklyTrendChart extends ConsumerWidget {
                       toY: (stat['count'] as int).toDouble(),
                       color: habitColor,
                       width: 12,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4),
+                      ),
                     ),
                   ],
                 );
@@ -320,7 +344,10 @@ class WeeklyTrendChart extends ConsumerWidget {
       loading: () => const SizedBox(
         height: 200,
         child: Center(
-          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.textMuted,
+          ),
         ),
       ),
       error: (err, stack) => Center(child: Text('Error: $err')),

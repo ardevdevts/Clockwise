@@ -44,15 +44,15 @@ Future<void> _checkAndSendDueReminders(
     
     if (diff >= 0 && diff <= 5) {
       // Send notification
-      if (reminder.todoId != null) {
-        final todo = await database.getTodoById(reminder.todoId!);
+      if (reminder.todoUuid != null) {
+        final todo = await database.getTodoByUuid(reminder.todoUuid!);
         if (todo != null && !todo.completed) {
           await notificationService.scheduleTaskReminder(todo, reminder.remindAt);
         }
-      } else if (reminder.habitId != null) {
-        final habit = await database.getHabitById(reminder.habitId!);
+      } else if (reminder.habitUuid != null) {
+        final habit = await database.getHabitByUuid(reminder.habitUuid!);
         if (habit != null && !habit.archived) {
-          final notificationId = (reminder.habitId! * 100000 + reminder.id).hashCode.abs();
+          final notificationId = (habit.id * 100000 + reminder.id).hashCode.abs();
           await notificationService.scheduleHabitReminder(
             habit,
             reminder.remindAt,

@@ -7,7 +7,7 @@ import '../../core/services/service_providers.dart';
 import 'habit_constants.dart';
 
 class ReminderTimeData {
-  final int? id; 
+  final int? id;
   TimeOfDay time;
 
   ReminderTimeData({this.id, required this.time});
@@ -39,10 +39,7 @@ class _MinimalTextField extends StatelessWidget {
       maxLines: maxLines,
       keyboardType: keyboardType,
       onChanged: onChanged,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 16,
-      ),
+      style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: AppColors.textMuted),
@@ -52,7 +49,10 @@ class _MinimalTextField extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
       ),
     );
   }
@@ -61,23 +61,16 @@ class _MinimalTextField extends StatelessWidget {
 class _MinimalButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
-  final bool isDestructive;
 
-  const _MinimalButton({
-    required this.label,
-    required this.onPressed,
-    this.isDestructive = false,
-  });
+  const _MinimalButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        backgroundColor: isDestructive
-            ? AppColors.error.withOpacity(0.15)
-            : AppColors.accentBlue.withOpacity(0.15),
-        foregroundColor: isDestructive ? AppColors.error : AppColors.accentBlue,
+        backgroundColor: AppColors.accentBlue.withOpacity(0.15),
+        foregroundColor: AppColors.accentBlue,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
@@ -131,7 +124,9 @@ class _SegmentedControl extends StatelessWidget {
                 option.substring(0, 1).toUpperCase() + option.substring(1),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                  color: isSelected
+                      ? AppColors.accentBlue
+                      : AppColors.textSecondary,
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 ),
@@ -149,10 +144,7 @@ class _DaySelector extends StatelessWidget {
   final Set<int> selectedDays;
   final ValueChanged<Set<int>> onDaysChanged;
 
-  const _DaySelector({
-    required this.selectedDays,
-    required this.onDaysChanged,
-  });
+  const _DaySelector({required this.selectedDays, required this.onDaysChanged});
 
   static const List<String> dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -190,7 +182,9 @@ class _DaySelector extends StatelessWidget {
               child: Text(
                 dayNames[index],
                 style: TextStyle(
-                  color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                  color: isSelected
+                      ? AppColors.accentBlue
+                      : AppColors.textSecondary,
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 ),
@@ -207,11 +201,7 @@ class HabitDialog extends ConsumerStatefulWidget {
   final Habit? habit;
   final AppDatabase database;
 
-  const HabitDialog({
-    super.key,
-    this.habit,
-    required this.database,
-  });
+  const HabitDialog({super.key, this.habit, required this.database});
 
   @override
   ConsumerState<HabitDialog> createState() => _HabitDialogState();
@@ -243,16 +233,24 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
 
   void _initializeFields() {
     _nameController = TextEditingController(text: widget.habit?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.habit?.description ?? '');
-    _selectedColor = widget.habit?.color ?? habitColors[0].value.toRadixString(16).substring(2);
+    _descriptionController = TextEditingController(
+      text: widget.habit?.description ?? '',
+    );
+    _selectedColor =
+        widget.habit?.color ??
+        habitColors[0].toARGB32().toRadixString(16).substring(2);
     _goalType = widget.habit?.goalType ?? 'boolean';
     _goalValue = widget.habit?.goalValue ?? 1;
     _goalUnit = widget.habit?.goalUnit ?? '';
     _interval = widget.habit?.interval ?? 'daily';
 
     // Parse custom days (0=Sunday, 1=Monday, etc.)
-    if (widget.habit?.customDays != null && widget.habit!.customDays!.isNotEmpty) {
-      _selectedDays = widget.habit!.customDays!.split(',').map((e) => int.parse(e)).toSet();
+    if (widget.habit?.customDays != null &&
+        widget.habit!.customDays!.isNotEmpty) {
+      _selectedDays = widget.habit!.customDays!
+          .split(',')
+          .map((e) => int.parse(e))
+          .toSet();
     }
 
     _intervalDaysValue = widget.habit?.intervalDays ?? 2;
@@ -261,12 +259,18 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
   Future<void> _loadExistingReminders() async {
     if (widget.habit != null) {
       final reminderService = ref.read(reminderServiceProvider);
-      final existingReminders = await reminderService.getHabitReminders(widget.habit!.id);
+      final existingReminders = await reminderService.getHabitReminders(
+        widget.habit!.uuid,
+      );
       setState(() {
-        _reminderTimes.addAll(existingReminders.map((r) => ReminderTimeData(
-          id: r.id,
-          time: TimeOfDay.fromDateTime(r.remindAt),
-        )));
+        _reminderTimes.addAll(
+          existingReminders.map(
+            (r) => ReminderTimeData(
+              id: r.id,
+              time: TimeOfDay.fromDateTime(r.remindAt),
+            ),
+          ),
+        );
       });
     }
   }
@@ -330,7 +334,10 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
                 spacing: 12,
                 runSpacing: 12,
                 children: habitColors.map((color) {
-                  final colorHex = color.value.toRadixString(16).substring(2);
+                  final colorHex = color
+                      .toARGB32()
+                      .toRadixString(16)
+                      .substring(2);
                   final isSelected = _selectedColor == colorHex;
                   return GestureDetector(
                     onTap: () => setState(() => _selectedColor = colorHex),
@@ -345,7 +352,11 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
                             : null,
                       ),
                       child: isSelected
-                          ? const Icon(Icons.check, color: Colors.white, size: 20)
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 20,
+                            )
                           : null,
                     ),
                   );
@@ -403,10 +414,15 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
                     SizedBox(
                       width: 80,
                       child: _MinimalTextField(
-                        controller: TextEditingController(text: _intervalDaysValue.toString())
-                          ..selection = TextSelection.fromPosition(
-                            TextPosition(offset: _intervalDaysValue.toString().length),
-                          ),
+                        controller:
+                            TextEditingController(
+                                text: _intervalDaysValue.toString(),
+                              )
+                              ..selection = TextSelection.fromPosition(
+                                TextPosition(
+                                  offset: _intervalDaysValue.toString().length,
+                                ),
+                              ),
                         hint: 'Days',
                         keyboardType: TextInputType.number,
                         onChanged: (val) {
@@ -453,11 +469,13 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
                     Expanded(
                       flex: 2,
                       child: _MinimalTextField(
-                        controller: TextEditingController(
-                          text: _goalValue.toString(),
-                        )..selection = TextSelection.fromPosition(
-                            TextPosition(offset: _goalValue.toString().length),
-                          ),
+                        controller:
+                            TextEditingController(text: _goalValue.toString())
+                              ..selection = TextSelection.fromPosition(
+                                TextPosition(
+                                  offset: _goalValue.toString().length,
+                                ),
+                              ),
                         hint: 'Goal value',
                         keyboardType: TextInputType.number,
                         onChanged: (val) {
@@ -494,66 +512,83 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
 
               // List of reminder times
               if (_reminderTimes.isNotEmpty) ...[
-                ..._reminderTimes.map((reminderData) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppColors.border, width: 0.5),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.access_time, size: 18, color: AppColors.accentBlue),
-                      const SizedBox(width: 12),
-                      Text(
-                        reminderData.time.format(context),
-                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 15),
-                      ),
-                      const Spacer(),
-                      // Edit button
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.accentBlue),
-                        constraints: const BoxConstraints(),
-                        padding: EdgeInsets.zero,
-                        onPressed: () async {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: reminderData.time,
-                            builder: (context, child) {
-                              return Theme(
-                                data: ThemeData.dark().copyWith(
-                                  colorScheme: const ColorScheme.dark(
-                                    primary: AppColors.accentBlue,
-                                    surface: AppColors.elevatedSurface,
+                ..._reminderTimes.map(
+                  (reminderData) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.border, width: 0.5),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 18,
+                          color: AppColors.accentBlue,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          reminderData.time.format(context),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const Spacer(),
+                        // Edit button
+                        IconButton(
+                          icon: const Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: AppColors.accentBlue,
+                          ),
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                          onPressed: () async {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: reminderData.time,
+                              builder: (context, child) {
+                                return Theme(
+                                  data: ThemeData.dark().copyWith(
+                                    colorScheme: const ColorScheme.dark(
+                                      primary: AppColors.accentBlue,
+                                      surface: AppColors.elevatedSurface,
+                                    ),
                                   ),
-                                ),
-                                child: child!,
-                              );
-                            },
-                          );
-                          if (time != null) {
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (time != null) {
+                              setState(() {
+                                reminderData.time = time;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        // Delete button
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: AppColors.error,
+                          ),
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
                             setState(() {
-                              reminderData.time = time;
+                              _reminderTimes.remove(reminderData);
                             });
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      // Delete button
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                        constraints: const BoxConstraints(),
-                        padding: EdgeInsets.zero,
-                        onPressed: () {
-                          setState(() {
-                            _reminderTimes.remove(reminderData);
-                          });
-                        },
-                      ),
-                    ],
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                )),
+                ),
                 const SizedBox(height: 8),
               ],
 
@@ -582,7 +617,10 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.accentBlue.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(6),
@@ -595,7 +633,10 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
                       SizedBox(width: 8),
                       Text(
                         'Add Reminder',
-                        style: TextStyle(color: AppColors.accentBlue, fontSize: 15),
+                        style: TextStyle(
+                          color: AppColors.accentBlue,
+                          fontSize: 15,
+                        ),
                       ),
                     ],
                   ),
@@ -626,50 +667,82 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
                         customDaysStr = daysList.join(',');
                       }
 
-                      int habitId;
+                      String habitUuid;
                       if (widget.habit == null) {
                         // Create new habit
-                        habitId = await widget.database.insertHabit(
+                        final habitId = await widget.database.insertHabit(
                           HabitsCompanion.insert(
                             name: _nameController.text.trim(),
-                            description: drift.Value(_descriptionController.text.trim().isEmpty
-                                ? null
-                                : _descriptionController.text.trim()),
+                            description: drift.Value(
+                              _descriptionController.text.trim().isEmpty
+                                  ? null
+                                  : _descriptionController.text.trim(),
+                            ),
                             color: _selectedColor,
                             interval: _interval,
                             customDays: drift.Value(customDaysStr),
-                            intervalDays: drift.Value(_interval == 'interval' ? _intervalDaysValue : null),
+                            intervalDays: drift.Value(
+                              _interval == 'interval'
+                                  ? _intervalDaysValue
+                                  : null,
+                            ),
                             goalType: _goalType,
-                            goalValue: drift.Value(_goalType == 'unit' ? _goalValue : null),
-                            goalUnit: drift.Value(_goalType == 'unit' ? _goalUnit : null),
+                            goalValue: drift.Value(
+                              _goalType == 'unit' ? _goalValue : null,
+                            ),
+                            goalUnit: drift.Value(
+                              _goalType == 'unit' ? _goalUnit : null,
+                            ),
                           ),
                         );
+                        // Get the newly created habit to access its UUID
+                        final newHabit = await widget.database.getHabitById(
+                          habitId,
+                        );
+                        habitUuid = newHabit!.uuid;
                       } else {
                         // Update existing habit
-                        habitId = widget.habit!.id;
+                        habitUuid = widget.habit!.uuid;
                         await widget.database.updateHabit(
                           widget.habit!.copyWith(
                             name: _nameController.text.trim(),
-                            description: drift.Value(_descriptionController.text.trim().isEmpty
-                                ? null
-                                : _descriptionController.text.trim()),
+                            description: drift.Value(
+                              _descriptionController.text.trim().isEmpty
+                                  ? null
+                                  : _descriptionController.text.trim(),
+                            ),
                             color: _selectedColor,
                             interval: _interval,
                             customDays: drift.Value(customDaysStr),
-                            intervalDays: drift.Value(_interval == 'interval' ? _intervalDaysValue : null),
+                            intervalDays: drift.Value(
+                              _interval == 'interval'
+                                  ? _intervalDaysValue
+                                  : null,
+                            ),
                             goalType: _goalType,
-                            goalValue: drift.Value(_goalType == 'unit' ? _goalValue : null),
-                            goalUnit: drift.Value(_goalType == 'unit' ? _goalUnit : null),
+                            goalValue: drift.Value(
+                              _goalType == 'unit' ? _goalValue : null,
+                            ),
+                            goalUnit: drift.Value(
+                              _goalType == 'unit' ? _goalUnit : null,
+                            ),
                           ),
                         );
 
                         // Delete old reminders that were removed
-                        final reminderService = ref.read(reminderServiceProvider);
-                        final existingReminders = await reminderService.getHabitReminders(habitId);
+                        final reminderService = ref.read(
+                          reminderServiceProvider,
+                        );
+                        final existingReminders = await reminderService
+                            .getHabitReminders(habitUuid);
                         for (final existingReminder in existingReminders) {
-                          final stillExists = _reminderTimes.any((r) => r.id == existingReminder.id);
+                          final stillExists = _reminderTimes.any(
+                            (r) => r.id == existingReminder.id,
+                          );
                           if (!stillExists) {
-                            await reminderService.removeReminder(existingReminder.id);
+                            await reminderService.removeReminder(
+                              existingReminder.id,
+                            );
                           }
                         }
                       }
@@ -689,27 +762,41 @@ class _HabitDialogState extends ConsumerState<HabitDialog> {
 
                         // If time has passed today, schedule for tomorrow
                         if (reminderTime.isBefore(now)) {
-                          reminderTime = reminderTime.add(const Duration(days: 1));
+                          reminderTime = reminderTime.add(
+                            const Duration(days: 1),
+                          );
                         }
 
                         if (reminderData.id != null) {
                           // Update existing reminder
-                          final existingReminder = (await reminderService.getHabitReminders(habitId))
-                              .firstWhere((r) => r.id == reminderData.id);
+                          final existingReminder =
+                              (await reminderService.getHabitReminders(
+                                habitUuid,
+                              )).firstWhere((r) => r.id == reminderData.id);
                           await widget.database.updateReminder(
                             existingReminder.copyWith(remindAt: reminderTime),
                           );
                           // Reschedule notification
-                          final updatedHabit = await widget.database.getHabitById(habitId);
+                          final updatedHabit = await widget.database
+                              .getHabitByUuid(habitUuid);
                           if (updatedHabit != null) {
-                            final notificationService = ref.read(notificationServiceProvider);
-                            final notificationId = (habitId * 100000 + reminderData.id!).hashCode.abs();
-                            await notificationService.scheduleHabitReminder(updatedHabit, reminderTime, notificationId);
+                            final notificationService = ref.read(
+                              notificationServiceProvider,
+                            );
+                            final notificationId =
+                                (updatedHabit.id * 100000 + reminderData.id!)
+                                    .hashCode
+                                    .abs();
+                            await notificationService.scheduleHabitReminder(
+                              updatedHabit,
+                              reminderTime,
+                              notificationId,
+                            );
                           }
                         } else {
                           // Create new reminder
                           await reminderService.addHabitReminder(
-                            habitId,
+                            habitUuid,
                             reminderTime,
                             recurring: true,
                           );

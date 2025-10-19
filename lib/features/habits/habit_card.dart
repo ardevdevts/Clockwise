@@ -4,6 +4,8 @@ import '../../database/crud.dart';
 import '../../core/theme/colors.dart';
 import 'package:intl/intl.dart';
 
+import 'package:uuid/uuid.dart';
+
 // Habit Card Widget
 class HabitCard extends ConsumerStatefulWidget {
   final Habit habit;
@@ -57,7 +59,7 @@ class _HabitCardState extends ConsumerState<HabitCard> {
 
   Future<void> _loadLastLog() async {
     try {
-      final lastLog = await widget.database.getLastHabitLog(widget.habit.id);
+      final lastLog = await widget.database.getLastHabitLog(widget.habit.uuid);
       if (mounted) {
         setState(() {
           _lastLog = lastLog;
@@ -73,24 +75,30 @@ class _HabitCardState extends ConsumerState<HabitCard> {
     final habitColor = Color(int.parse('FF${widget.habit.color}', radix: 16));
 
     return StreamBuilder<HabitLog?>(
-      stream: widget.database.watchHabitLogForDate(widget.habit.id, widget.selectedDate),
+      stream: widget.database.watchHabitLogForDate(
+        widget.habit.uuid,
+        widget.selectedDate,
+      ),
       builder: (context, currentLogSnapshot) {
         // Initialize local state from stream only once
         if (!_isInitialized) {
           if (currentLogSnapshot.hasData) {
             _localLog = currentLogSnapshot.data;
             _isInitialized = true;
-          } else if (currentLogSnapshot.connectionState != ConnectionState.waiting) {
+          } else if (currentLogSnapshot.connectionState !=
+              ConnectionState.waiting) {
             _isInitialized = true;
           }
-        } else if (!_isPendingOptimisticUpdate && currentLogSnapshot.connectionState == ConnectionState.active) {
+        } else if (!_isPendingOptimisticUpdate &&
+            currentLogSnapshot.connectionState == ConnectionState.active) {
           // Only update from stream if we don't have a pending optimistic update
           final streamLog = currentLogSnapshot.data;
           _localLog = streamLog;
         }
 
         // Clear pending flag after stream has stabilized
-        if (_isPendingOptimisticUpdate && currentLogSnapshot.connectionState == ConnectionState.active) {
+        if (_isPendingOptimisticUpdate &&
+            currentLogSnapshot.connectionState == ConnectionState.active) {
           // Wait one more frame to ensure DB operation completed
           Future.microtask(() {
             if (mounted) {
@@ -110,10 +118,7 @@ class _HabitCardState extends ConsumerState<HabitCard> {
           decoration: BoxDecoration(
             color: habitColor.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: habitColor.withOpacity(0.25),
-              width: 1.5,
-            ),
+            border: Border.all(color: habitColor.withOpacity(0.25), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: habitColor.withOpacity(0.1),
@@ -161,7 +166,8 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                                   letterSpacing: -0.2,
                                 ),
                               ),
-                              if (widget.habit.description != null && widget.habit.description!.isNotEmpty) ...[
+                              if (widget.habit.description != null &&
+                                  widget.habit.description!.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   widget.habit.description!,
@@ -186,30 +192,42 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: isCompleted ? habitColor : Colors.transparent,
+                                color: isCompleted
+                                    ? habitColor
+                                    : Colors.transparent,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: habitColor,
                                   width: 2.5,
                                 ),
-                                boxShadow: isCompleted ? [
-                                  BoxShadow(
-                                    color: habitColor.withOpacity(0.4),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ] : null,
+                                boxShadow: isCompleted
+                                    ? [
+                                        BoxShadow(
+                                          color: habitColor.withOpacity(0.4),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
                               ),
                               child: isCompleted
-                                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    )
                                   : null,
                             ),
                           )
                         else
                           GestureDetector(
-                            onTap: () => _showUnitInput(context, log, currentProgress),
+                            onTap: () =>
+                                _showUnitInput(context, log, currentProgress),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: isCompleted
                                     ? habitColor.withOpacity(0.2)
@@ -235,10 +253,16 @@ class _HabitCardState extends ConsumerState<HabitCard> {
 
                         // More menu
                         PopupMenuButton<String>(
-                          icon: Icon(Icons.more_horiz, color: habitColor.withOpacity(0.7), size: 20),
+                          icon: Icon(
+                            Icons.more_horiz,
+                            color: habitColor.withOpacity(0.7),
+                            size: 20,
+                          ),
                           color: AppColors.elevatedSurface,
                           elevation: 8,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           offset: const Offset(-12, 0),
                           onSelected: (value) {
                             if (value == 'edit') {
@@ -253,7 +277,11 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                               height: 40,
                               child: Row(
                                 children: [
-                                  Icon(Icons.edit_outlined, size: 18, color: AppColors.textPrimary),
+                                  Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                    color: AppColors.textPrimary,
+                                  ),
                                   const SizedBox(width: 12),
                                   Text('Edit', style: TextStyle(fontSize: 15)),
                                 ],
@@ -264,9 +292,19 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                               height: 40,
                               child: Row(
                                 children: [
-                                  Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                                  Icon(
+                                    Icons.delete_outline,
+                                    size: 18,
+                                    color: AppColors.error,
+                                  ),
                                   const SizedBox(width: 12),
-                                  Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 15)),
+                                  Text(
+                                    'Delete',
+                                    style: TextStyle(
+                                      color: AppColors.error,
+                                      fontSize: 15,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -290,10 +328,15 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                     Row(
                       children: [
                         // Goal info on the left
-                        if (widget.habit.goalType == 'unit' && widget.habit.goalUnit != null)
+                        if (widget.habit.goalType == 'unit' &&
+                            widget.habit.goalUnit != null)
                           Row(
                             children: [
-                              Icon(Icons.flag_outlined, size: 13, color: AppColors.textMuted),
+                              Icon(
+                                Icons.flag_outlined,
+                                size: 13,
+                                color: AppColors.textMuted,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 'Goal: ${widget.habit.goalValue?.toStringAsFixed(0)} ${widget.habit.goalUnit}',
@@ -309,7 +352,11 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                         if (_lastLog != null)
                           Row(
                             children: [
-                              Icon(Icons.history, size: 13, color: AppColors.textMuted),
+                              Icon(
+                                Icons.history,
+                                size: 13,
+                                color: AppColors.textMuted,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 'Last: ${DateFormat('MMM d').format(_lastLog!.date)}',
@@ -340,9 +387,13 @@ class _HabitCardState extends ConsumerState<HabitCard> {
       } else {
         _localLog = HabitLog(
           id: log?.id ?? -1,
-          habitId: widget.habit.id,
+          uuid: log?.uuid ?? const Uuid().v4(),
+          habitUuid: widget.habit.uuid,
           date: widget.selectedDate,
           amount: 1,
+          createdAt: log?.createdAt ?? DateTime.now(),
+          updatedAt: DateTime.now(),
+          isDeleted: false,
         );
       }
     });
@@ -351,7 +402,11 @@ class _HabitCardState extends ConsumerState<HabitCard> {
       if (isCompleted && log != null) {
         await widget.database.deleteHabitLogById(log.id);
       } else {
-        await widget.database.upsertHabitLog(widget.habit.id, widget.selectedDate, 1);
+        await widget.database.upsertHabitLog(
+          widget.habit.uuid,
+          widget.selectedDate,
+          1,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -371,7 +426,11 @@ class _HabitCardState extends ConsumerState<HabitCard> {
     }
   }
 
-  void _showUnitInput(BuildContext context, HabitLog? log, double currentProgress) {
+  void _showUnitInput(
+    BuildContext context,
+    HabitLog? log,
+    double currentProgress,
+  ) {
     final controller = TextEditingController(
       text: currentProgress > 0 ? currentProgress.toStringAsFixed(0) : '',
     );
@@ -464,7 +523,10 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                   const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   _MinimalButton(
@@ -484,15 +546,23 @@ class _HabitCardState extends ConsumerState<HabitCard> {
                         _isPendingOptimisticUpdate = true;
                         _localLog = HabitLog(
                           id: log?.id ?? -1,
-                          habitId: widget.habit.id,
+                          uuid: log?.uuid ?? const Uuid().v4(),
+                          habitUuid: widget.habit.uuid,
                           date: widget.selectedDate,
                           amount: amount,
+                          createdAt: log?.createdAt ?? DateTime.now(),
+                          updatedAt: DateTime.now(),
+                          isDeleted: false,
                         );
                       });
 
                       // Perform database operation in background
                       try {
-                        await widget.database.upsertHabitLog(widget.habit.id, widget.selectedDate, amount);
+                        await widget.database.upsertHabitLog(
+                          widget.habit.uuid,
+                          widget.selectedDate,
+                          amount,
+                        );
                       } catch (e) {
                         // Revert on error
                         if (mounted) {
@@ -539,7 +609,8 @@ class CompactContributionGrid extends StatefulWidget {
   });
 
   @override
-  State<CompactContributionGrid> createState() => _CompactContributionGridState();
+  State<CompactContributionGrid> createState() =>
+      _CompactContributionGridState();
 }
 
 class _CompactContributionGridState extends State<CompactContributionGrid> {
@@ -556,7 +627,7 @@ class _CompactContributionGridState extends State<CompactContributionGrid> {
   void didUpdateWidget(CompactContributionGrid oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Reload if habit changes
-    if (oldWidget.habit.id != widget.habit.id) {
+    if (oldWidget.habit.uuid != widget.habit.uuid) {
       _loadLogs();
     } else if (oldWidget.currentDateLog != widget.currentDateLog) {
       // Optimistically update the current date log in the map
@@ -583,7 +654,7 @@ class _CompactContributionGridState extends State<CompactContributionGrid> {
     });
 
     try {
-      final logs = await widget.database.getHabitLogs(widget.habit.id);
+      final logs = await widget.database.getHabitLogs(widget.habit.uuid);
       if (!mounted) return;
 
       final logMap = <String, HabitLog>{};
@@ -637,8 +708,10 @@ class _CompactContributionGridState extends State<CompactContributionGrid> {
         final availableWidth = constraints.maxWidth;
         final spacing = 3.0;
         final totalSpacing = (weeks - 1) * spacing;
-        final squareSize = ((availableWidth - totalSpacing) / weeks).floorToDouble();
-        final actualSquareSize = ((squareSize - (6 * spacing)) / 7).floorToDouble();
+        final squareSize = ((availableWidth - totalSpacing) / weeks)
+            .floorToDouble();
+        final actualSquareSize = ((squareSize - (6 * spacing)) / 7)
+            .floorToDouble();
 
         // Make squares bigger (minimum 10px)
         final finalSquareSize = actualSquareSize < 10 ? 10.0 : actualSquareSize;
@@ -658,7 +731,12 @@ class _CompactContributionGridState extends State<CompactContributionGrid> {
                 controller: scrollController,
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: _buildMonthLabels(startDate, weeks, finalSquareSize, spacing),
+                  children: _buildMonthLabels(
+                    startDate,
+                    weeks,
+                    finalSquareSize,
+                    spacing,
+                  ),
                 ),
               ),
             ),
@@ -674,7 +752,9 @@ class _CompactContributionGridState extends State<CompactContributionGrid> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: List.generate(weeks, (weekIndex) {
                     return Padding(
-                      padding: EdgeInsets.only(right: weekIndex < weeks - 1 ? spacing : 0),
+                      padding: EdgeInsets.only(
+                        right: weekIndex < weeks - 1 ? spacing : 0,
+                      ),
                       child: Column(
                         children: List.generate(7, (dayIndex) {
                           final dayOffset = (weekIndex * 7) + dayIndex;
@@ -692,12 +772,17 @@ class _CompactContributionGridState extends State<CompactContributionGrid> {
                           final completionPercent = _getCompletionPercent(log);
 
                           return Padding(
-                            padding: EdgeInsets.only(bottom: dayIndex < 6 ? spacing : 0),
+                            padding: EdgeInsets.only(
+                              bottom: dayIndex < 6 ? spacing : 0,
+                            ),
                             child: Container(
                               width: finalSquareSize,
                               height: finalSquareSize,
                               decoration: BoxDecoration(
-                                color: _getIntensityColor(completionPercent, widget.habitColor),
+                                color: _getIntensityColor(
+                                  completionPercent,
+                                  widget.habitColor,
+                                ),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),
@@ -715,7 +800,12 @@ class _CompactContributionGridState extends State<CompactContributionGrid> {
     );
   }
 
-  List<Widget> _buildMonthLabels(DateTime startDate, int weeks, double squareSize, double spacing) {
+  List<Widget> _buildMonthLabels(
+    DateTime startDate,
+    int weeks,
+    double squareSize,
+    double spacing,
+  ) {
     final labels = <Widget>[];
     final monthWidths = <String, double>{};
 
@@ -793,23 +883,16 @@ Color _getIntensityColor(double completionPercent, Color baseColor) {
 class _MinimalButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
-  final bool isDestructive;
 
-  const _MinimalButton({
-    required this.label,
-    required this.onPressed,
-    this.isDestructive = false,
-  });
+  const _MinimalButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: onPressed,
       style: TextButton.styleFrom(
-        backgroundColor: isDestructive
-            ? AppColors.error.withOpacity(0.15)
-            : AppColors.accentBlue.withOpacity(0.15),
-        foregroundColor: isDestructive ? AppColors.error : AppColors.accentBlue,
+        backgroundColor: AppColors.accentBlue.withOpacity(0.15),
+        foregroundColor: AppColors.accentBlue,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),

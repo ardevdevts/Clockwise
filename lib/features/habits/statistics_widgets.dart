@@ -1,4 +1,3 @@
-import 'package:financialtracker/database/crud.dart';
 import 'package:financialtracker/features/habits/habit_providers.dart';
 import 'package:financialtracker/features/habits/habit_with_details.dart';
 import 'package:flutter/material.dart';
@@ -33,13 +32,17 @@ class PeriodSelector extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.accentBlue.withOpacity(0.15) : Colors.transparent,
+                color: isSelected
+                    ? AppColors.accentBlue.withOpacity(0.15)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 '$period days',
                 style: TextStyle(
-                  color: isSelected ? AppColors.accentBlue : AppColors.textSecondary,
+                  color: isSelected
+                      ? AppColors.accentBlue
+                      : AppColors.textSecondary,
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 ),
@@ -68,7 +71,7 @@ class StatisticsCards extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final habit = habitWithDetails.habit;
-    final statsAsync = ref.watch(habitStatsProvider((habit.id, days)));
+    final statsAsync = ref.watch(habitStatsProvider((habit.uuid, days)));
 
     return statsAsync.when(
       data: (stats) => Column(
@@ -123,7 +126,8 @@ class StatisticsCards extends ConsumerWidget {
                 Expanded(
                   child: StatCard(
                     title: 'Average',
-                    value: '${stats['averageAmount'].toStringAsFixed(1)} ${habit.goalUnit}',
+                    value:
+                        '${stats['averageAmount'].toStringAsFixed(1)} ${habit.goalUnit}',
                     icon: Icons.analytics,
                     color: habitColor,
                   ),
@@ -132,7 +136,8 @@ class StatisticsCards extends ConsumerWidget {
                 Expanded(
                   child: StatCard(
                     title: 'Total',
-                    value: '${stats['totalAmount'].toStringAsFixed(0)} ${habit.goalUnit}',
+                    value:
+                        '${stats['totalAmount'].toStringAsFixed(0)} ${habit.goalUnit}',
                     icon: Icons.functions,
                     color: habitColor,
                   ),
@@ -145,7 +150,10 @@ class StatisticsCards extends ConsumerWidget {
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(24.0),
-          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: AppColors.textMuted,
+          ),
         ),
       ),
       error: (err, stack) => Center(child: Text('Error: $err')),

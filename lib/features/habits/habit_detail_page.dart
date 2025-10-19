@@ -23,7 +23,7 @@ class HabitDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final habitColor = Color(int.parse('FF${habit.color}', radix: 16));
     final selectedPeriod = ref.watch(selectedPeriodProvider);
-    final habitWithDetails = ref.watch(habitWithDetailsProvider(habit.id));
+    final habitWithDetails = ref.watch(habitWithDetailsProvider(habit.uuid));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -266,7 +266,7 @@ class HabitDetailPage extends ConsumerWidget {
                   horizontal: 24,
                   vertical: 8,
                 ),
-                child: HabitRemindersList(habitId: habit.id),
+                child: HabitRemindersList(habitUuid: habit.uuid),
               ),
             ),
 
@@ -409,7 +409,7 @@ Future<bool> _showAddHabitReminderDialog(
   final reminderService = ref.read(reminderServiceProvider);
 
   // Load existing reminders
-  final existingReminders = await reminderService.getHabitReminders(habit.id);
+  final existingReminders = await reminderService.getHabitReminders(habit.uuid);
   final List<ReminderTimeData> reminderTimes = existingReminders.map((r) {
     return ReminderTimeData(id: r.id, time: TimeOfDay.fromDateTime(r.remindAt));
   }).toList();
@@ -645,7 +645,7 @@ Future<bool> _showAddHabitReminderDialog(
                           );
                         } else {
                           await reminderService.addHabitReminder(
-                            habit.id,
+                            habit.uuid,
                             reminderTime,
                             recurring: true,
                           );

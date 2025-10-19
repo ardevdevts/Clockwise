@@ -13,9 +13,9 @@ import 'package:drift/drift.dart' as drift;
 
 class NoteEditorPage extends ConsumerStatefulWidget {
   final Note? note;
-  final int? folderId;
+  final String? folderUuid;
 
-  const NoteEditorPage({super.key, this.note, this.folderId});
+  const NoteEditorPage({super.key, this.note, this.folderUuid});
 
   @override
   ConsumerState<NoteEditorPage> createState() => _NoteEditorPageState();
@@ -25,13 +25,13 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   late QuillController _controller;
   late TextEditingController _titleController;
   final FocusNode _editorFocusNode = FocusNode();
-  
+
   late final ValueNotifier<bool> _isPinnedNotifier;
   late final ValueNotifier<bool> _isFavoriteNotifier;
-  late final ValueNotifier<int?> _selectedFolderIdNotifier;
+  late final ValueNotifier<String?> _selectedFolderUuidNotifier;
   late final ValueNotifier<List<Tag>> _selectedTagsNotifier;
   bool _isLoading = true;
-  
+
   // Cache for database queries
   List<Tag>? _cachedTags;
   List<NoteFolder>? _cachedFolders;
@@ -41,7 +41,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     super.initState();
     _isPinnedNotifier = ValueNotifier(widget.note?.isPinned ?? false);
     _isFavoriteNotifier = ValueNotifier(widget.note?.isFavorite ?? false);
-    _selectedFolderIdNotifier = ValueNotifier(widget.note?.folderId ?? widget.folderId);
+    _selectedFolderUuidNotifier = ValueNotifier(
+      widget.note?.folderUuid ?? widget.folderUuid,
+    );
     _selectedTagsNotifier = ValueNotifier([]);
     _titleController = TextEditingController(text: widget.note?.title ?? '');
     _initializeEditor();
@@ -55,17 +57,19 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           document: doc,
           selection: const TextSelection.collapsed(offset: 0),
         );
-        
+
         // Load tags
         final database = ref.read(databaseProvider);
-        _selectedTagsNotifier.value = await database.getTagsForNote(widget.note!.id);
+        _selectedTagsNotifier.value = await database.getTagsForNote(
+          widget.note!.uuid,
+        );
       } catch (e) {
         _controller = QuillController.basic();
       }
     } else {
       _controller = QuillController.basic();
     }
-    
+
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -78,7 +82,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     _editorFocusNode.dispose();
     _isPinnedNotifier.dispose();
     _isFavoriteNotifier.dispose();
-    _selectedFolderIdNotifier.dispose();
+    _selectedFolderUuidNotifier.dispose();
     _selectedTagsNotifier.dispose();
     super.dispose();
   }
@@ -118,16 +122,25 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           _PinButton(notifier: _isPinnedNotifier),
           _FavoriteButton(notifier: _isFavoriteNotifier),
           IconButton(
-            icon: const Icon(Icons.content_paste, color: AppColors.textSecondary),
+            icon: const Icon(
+              Icons.content_paste,
+              color: AppColors.textSecondary,
+            ),
             onPressed: _pasteMarkdown,
             tooltip: 'Paste Markdown',
           ),
           IconButton(
-            icon: const Icon(Icons.label_outline, color: AppColors.textSecondary),
+            icon: const Icon(
+              Icons.label_outline,
+              color: AppColors.textSecondary,
+            ),
             onPressed: _showTagsDialog,
           ),
           IconButton(
-            icon: const Icon(Icons.folder_outlined, color: AppColors.textSecondary),
+            icon: const Icon(
+              Icons.folder_outlined,
+              color: AppColors.textSecondary,
+            ),
             onPressed: _showFolderDialog,
           ),
           if (widget.note != null)
@@ -177,9 +190,12 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
             valueListenable: _selectedTagsNotifier,
             builder: (context, selectedTags, _) {
               if (selectedTags.isEmpty) return const SizedBox.shrink();
-              
+
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 decoration: const BoxDecoration(
                   color: AppColors.surface,
                   border: Border(
@@ -191,9 +207,14 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                   runSpacing: 8,
                   children: selectedTags.map((tag) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: Color(int.parse('FF${tag.color}', radix: 16)).withValues(alpha: 0.2),
+                        color: Color(
+                          int.parse('FF${tag.color}', radix: 16),
+                        ).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
                           color: Color(int.parse('FF${tag.color}', radix: 16)),
@@ -206,7 +227,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                           Text(
                             tag.name,
                             style: TextStyle(
-                              color: Color(int.parse('FF${tag.color}', radix: 16)),
+                              color: Color(
+                                int.parse('FF${tag.color}', radix: 16),
+                              ),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -221,7 +244,9 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                             child: Icon(
                               Icons.close,
                               size: 14,
-                              color: Color(int.parse('FF${tag.color}', radix: 16)),
+                              color: Color(
+                                int.parse('FF${tag.color}', radix: 16),
+                              ),
                             ),
                           ),
                         ],
@@ -274,10 +299,10 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       }
 
       final markdown = clipboardData.text!;
-      
+
       // Convert markdown to HTML first
       final html = md.markdownToHtml(markdown);
-      
+
       // Convert HTML to Delta using flutter_quill_delta_from_html
       final delta = HtmlToDelta().convert(html);
 
@@ -287,31 +312,29 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Pasted content is empty or could not be converted'),
+              content: Text(
+                'Pasted content is empty or could not be converted',
+              ),
               backgroundColor: AppColors.error,
             ),
           );
         }
         return;
       }
-      
-      
+
       // Get current selection
       final selection = _controller.selection;
       final index = selection.baseOffset;
-      
+
       // Insert the converted delta at cursor position
       if (index >= 0 && index < _controller.document.length) {
         // Create a new delta that retains content up to cursor, then inserts new content
         final insertDelta = Delta()
           ..retain(index)
           ..concat(delta);
-        
-        _controller.document.compose(
-          insertDelta,
-          ChangeSource.local,
-        );
-        
+
+        _controller.document.compose(insertDelta, ChangeSource.local);
+
         // Move cursor to end of inserted content
         final newPosition = index + delta.length;
         _controller.updateSelection(
@@ -322,7 +345,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         // If no valid selection, replace entire document
         _controller.document = Document.fromDelta(delta);
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -347,7 +370,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
 
   void _showTagsDialog() async {
     final database = ref.read(databaseProvider);
-    
+
     // Cache tags if not already cached
     _cachedTags ??= await database.allTags;
     final allTags = _cachedTags!;
@@ -370,7 +393,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
 
   void _showFolderDialog() async {
     final database = ref.read(databaseProvider);
-    
+
     // Cache folders if not already cached
     _cachedFolders ??= await database.allNoteFolders;
     final folders = _cachedFolders!;
@@ -382,7 +405,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       barrierColor: Colors.black87,
       builder: (context) => _FolderDialog(
         folders: folders,
-        selectedFolderIdNotifier: _selectedFolderIdNotifier,
+        selectedFolderUuidNotifier: _selectedFolderUuidNotifier,
       ),
     );
   }
@@ -408,15 +431,18 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           NotesCompanion.insert(
             title: _titleController.text.trim(),
             content: content,
-            folderId: drift.Value(_selectedFolderIdNotifier.value),
+            folderUuid: drift.Value(_selectedFolderUuidNotifier.value),
             isPinned: drift.Value(_isPinnedNotifier.value),
             isFavorite: drift.Value(_isFavoriteNotifier.value),
           ),
         );
 
+        // Get the newly created note to access its UUID
+        final newNote = await database.getNoteById(noteId);
+
         // Add tags
         for (final tag in _selectedTagsNotifier.value) {
-          await database.addTagToNote(noteId, tag.id);
+          await database.addTagToNote(newNote!.uuid, tag.uuid);
         }
       } else {
         // Update existing note
@@ -424,17 +450,17 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
           widget.note!.copyWith(
             title: _titleController.text.trim(),
             content: content,
-            folderId: drift.Value(_selectedFolderIdNotifier.value),
+            folderUuid: drift.Value(_selectedFolderUuidNotifier.value),
             isPinned: _isPinnedNotifier.value,
             isFavorite: _isFavoriteNotifier.value,
-            updatedAt: drift.Value(DateTime.now()),
+            updatedAt: DateTime.now(),
           ),
         );
 
         // Update tags
         await database.setNoteTags(
-          widget.note!.id,
-          _selectedTagsNotifier.value.map((t) => t.id).toList(),
+          widget.note!.uuid,
+          _selectedTagsNotifier.value.map((t) => t.uuid).toList(),
         );
       }
 
@@ -472,11 +498,17 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -547,9 +579,7 @@ class _EditorToolbar extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border(
-          bottom: BorderSide(color: AppColors.border, width: 0.5),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 0.5)),
       ),
       child: QuillSimpleToolbar(
         controller: controller,
@@ -648,7 +678,9 @@ class _TagsDialogState extends State<_TagsDialog> {
                     setState(() {
                       _allTags.add(tag);
                     });
-                    final updated = List<Tag>.from(widget.selectedTagsNotifier.value);
+                    final updated = List<Tag>.from(
+                      widget.selectedTagsNotifier.value,
+                    );
                     updated.add(tag);
                     widget.selectedTagsNotifier.value = updated;
                     widget.onTagsUpdated();
@@ -668,7 +700,9 @@ class _TagsDialogState extends State<_TagsDialog> {
                     itemCount: _allTags.length,
                     itemBuilder: (context, index) {
                       final tag = _allTags[index];
-                      final isSelected = selectedTags.any((t) => t.id == tag.id);
+                      final isSelected = selectedTags.any(
+                        (t) => t.id == tag.id,
+                      );
 
                       return CheckboxListTile(
                         value: isSelected,
@@ -683,7 +717,10 @@ class _TagsDialogState extends State<_TagsDialog> {
                         },
                         title: Text(
                           tag.name,
-                          style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                          ),
                         ),
                         activeColor: AppColors.accentBlue,
                         checkColor: AppColors.textPrimary,
@@ -700,7 +737,10 @@ class _TagsDialogState extends State<_TagsDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Done', style: TextStyle(color: AppColors.accentBlue)),
+          child: const Text(
+            'Done',
+            style: TextStyle(color: AppColors.accentBlue),
+          ),
         ),
       ],
     );
@@ -709,11 +749,11 @@ class _TagsDialogState extends State<_TagsDialog> {
 
 class _FolderDialog extends StatelessWidget {
   final List<NoteFolder> folders;
-  final ValueNotifier<int?> selectedFolderIdNotifier;
+  final ValueNotifier<String?> selectedFolderUuidNotifier;
 
   const _FolderDialog({
     required this.folders,
-    required this.selectedFolderIdNotifier,
+    required this.selectedFolderUuidNotifier,
   });
 
   @override
@@ -728,13 +768,16 @@ class _FolderDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.note_outlined, color: AppColors.textSecondary),
+            leading: const Icon(
+              Icons.note_outlined,
+              color: AppColors.textSecondary,
+            ),
             title: const Text(
               'No Folder',
               style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
             ),
             onTap: () {
-              selectedFolderIdNotifier.value = null;
+              selectedFolderUuidNotifier.value = null;
               Navigator.of(context).pop();
             },
           ),
@@ -746,10 +789,13 @@ class _FolderDialog extends StatelessWidget {
               ),
               title: Text(
                 folder.name,
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                ),
               ),
               onTap: () {
-                selectedFolderIdNotifier.value = folder.id;
+                selectedFolderUuidNotifier.value = folder.uuid;
                 Navigator.of(context).pop();
               },
             );

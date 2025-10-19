@@ -3,6 +3,7 @@ import '../database.dart'; // your tables
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:financialtracker/features/habits/habit_with_details.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:uuid/uuid.dart';
 
 part 'crud.g.dart'; // will be generated
 
@@ -15,7 +16,7 @@ class AppDatabase extends _$AppDatabase {
 
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   // Migration strategy
   @override
@@ -24,38 +25,21 @@ class AppDatabase extends _$AppDatabase {
       await migrator.createAll();
     },
     onUpgrade: (migrator, from, to) async {
-      if (from < 2) {
-        // Add color column to habits table
-        await migrator.addColumn(habits, habits.color);
-      }
-      if (from < 3) {
-        // Add custom interval columns
-        await migrator.addColumn(habits, habits.customDays);
-        await migrator.addColumn(habits, habits.intervalDays);
-      }
-      if (from < 4) {
-        // Add color and icon columns to projects table
-        await migrator.addColumn(projects, projects.color);
-        await migrator.addColumn(projects, projects.icon);
-      }
-      if (from < 5) {
-        // Create TodoLinks table
-        await migrator.createTable(todoLinks);
-      }
-      if (from < 6) {
-        // Create TodoImages table
-        await migrator.createTable(todoImages);
-      }
-      if (from < 7) {
-        // Create Notes-related tables
-        await migrator.createTable(noteFolders);
-        await migrator.createTable(notes);
-        await migrator.createTable(tags);
-        await migrator.createTable(noteTags);
-      }
-      if (from < 8) {
-        // Add noteId column to todos table
-        await migrator.addColumn(todos, todos.noteId);
+      if (from < 9) {
+        // Schema changed to use UUIDs for foreign keys.
+        // This is a destructive migration that will delete all existing data.
+        await migrator.drop(projects);
+        await migrator.drop(todos);
+        await migrator.drop(habits);
+        await migrator.drop(habitLogs);
+        await migrator.drop(reminders);
+        await migrator.drop(todoLinks);
+        await migrator.drop(todoImages);
+        await migrator.drop(noteFolders);
+        await migrator.drop(notes);
+        await migrator.drop(tags);
+        await migrator.drop(noteTags);
+        await migrator.createAll();
       }
     },
     beforeOpen: (details) async {
@@ -125,80 +109,92 @@ class AppDatabase extends _$AppDatabase {
   // TASK-SPECIFIC QUERIES
 
   // Get tasks for a specific project
-  Future<List<Todo>> getTasksByProject(int projectId) {
-    return (select(todos)..where((tbl) => tbl.projectId.equals(projectId))).get();
+  Future<List<Todo>> getTasksByProject(String projectUuid) {
+    return (select(todos)..where((tbl) => tbl.projectUuid.equals(projectUuid))).get();
   }
 
   // Get root tasks (no parent) for a project
-  Future<List<Todo>> getRootTasksByProject(int projectId) {
+  Future<List<Todo>> getRootTasksByProject(String projectUuid) {
     return (select(todos)
-          ..where((tbl) => tbl.projectId.equals(projectId) & tbl.parentId.isNull()))
+          ..where((tbl) => tbl.projectUuid.equals(projectUuid) & tbl.parentUuid.isNull()))
         .get();
   }
 
   // Get subtasks for a specific task
-  Future<List<Todo>> getSubtasks(int parentId) {
-    return (select(todos)..where((tbl) => tbl.parentId.equals(parentId))).get();
+  Future<List<Todo>> getSubtasks(String parentUuid) {
+    return (select(todos)..where((tbl) => tbl.parentUuid.equals(parentUuid))).get();
   }
 
   // Get a single task by ID
   Future<Todo?> getTodoById(int id) {
     return (select(todos)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
+  
+  Future<Todo?> getTodoByUuid(String uuid) {
+    return (select(todos)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
+  }
 
   // Get a single project by ID
   Future<Project?> getProjectById(int id) {
     return (select(projects)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+  }
+  
+  Future<Project?> getProjectByUuid(String uuid) {
+    return (select(projects)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
   }
 
   // Watch projects (stream for real-time updates)
   Stream<List<Project>> watchProjects() => select(projects).watch();
 
   // Watch tasks by project (stream)
-  Stream<List<Todo>> watchTasksByProject(int projectId) {
-    return (select(todos)..where((tbl) => tbl.projectId.equals(projectId))).watch();
+  Stream<List<Todo>> watchTasksByProject(String projectUuid) {
+    return (select(todos)..where((tbl) => tbl.projectUuid.equals(projectUuid))).watch();
   }
 
   // Watch root tasks by project (stream)
-  Stream<List<Todo>> watchRootTasksByProject(int projectId) {
+  Stream<List<Todo>> watchRootTasksByProject(String projectUuid) {
     return (select(todos)
-          ..where((tbl) => tbl.projectId.equals(projectId) & tbl.parentId.isNull()))
+          ..where((tbl) => tbl.projectUuid.equals(projectUuid) & tbl.parentUuid.isNull()))
         .watch();
   }
 
   // Watch subtasks (stream)
-  Stream<List<Todo>> watchSubtasks(int parentId) {
-    return (select(todos)..where((tbl) => tbl.parentId.equals(parentId))).watch();
+  Stream<List<Todo>> watchSubtasks(String parentUuid) {
+    return (select(todos)..where((tbl) => tbl.parentUuid.equals(parentUuid))).watch();
   }
 
   // Watch a single todo by ID (stream)
   Stream<Todo?> watchTodoById(int id) {
     return (select(todos)..where((tbl) => tbl.id.equals(id))).watchSingleOrNull();
   }
+  
+  Stream<Todo?> watchTodoByUuid(String uuid) {
+    return (select(todos)..where((tbl) => tbl.uuid.equals(uuid))).watchSingleOrNull();
+  }
 
   // Get links for a specific todo
-  Future<List<TodoLink>> getTodoLinks(int todoId) {
-    return (select(todoLinks)..where((tbl) => tbl.todoId.equals(todoId))).get();
+  Future<List<TodoLink>> getTodoLinks(String todoUuid) {
+    return (select(todoLinks)..where((tbl) => tbl.todoUuid.equals(todoUuid))).get();
   }
 
   // Watch links for a specific todo (stream)
-  Stream<List<TodoLink>> watchTodoLinks(int todoId) {
-    return (select(todoLinks)..where((tbl) => tbl.todoId.equals(todoId))).watch();
+  Stream<List<TodoLink>> watchTodoLinks(String todoUuid) {
+    return (select(todoLinks)..where((tbl) => tbl.todoUuid.equals(todoUuid))).watch();
   }
 
   // Get images for a specific todo
-  Future<List<TodoImage>> getTodoImages(int todoId) {
-    return (select(todoImages)..where((tbl) => tbl.todoId.equals(todoId))).get();
+  Future<List<TodoImage>> getTodoImages(String todoUuid) {
+    return (select(todoImages)..where((tbl) => tbl.todoUuid.equals(todoUuid))).get();
   }
 
   // Watch images for a specific todo (stream)
-  Stream<List<TodoImage>> watchTodoImages(int todoId) {
-    return (select(todoImages)..where((tbl) => tbl.todoId.equals(todoId))).watch();
+  Stream<List<TodoImage>> watchTodoImages(String todoUuid) {
+    return (select(todoImages)..where((tbl) => tbl.todoUuid.equals(todoUuid))).watch();
   }
 
   // Get project task statistics
-  Future<Map<String, int>> getProjectStats(int projectId) async {
-    final tasks = await getTasksByProject(projectId);
+  Future<Map<String, int>> getProjectStats(String projectUuid) async {
+    final tasks = await getTasksByProject(projectUuid);
     final completedTasks = tasks.where((task) => task.completed).length;
     return {
       'total': tasks.length,
@@ -207,8 +203,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Watch project task statistics (stream)
-  Stream<Map<String, int>> watchProjectStats(int projectId) {
-    return watchTasksByProject(projectId).map((tasks) {
+  Stream<Map<String, int>> watchProjectStats(String projectUuid) {
+    return watchTasksByProject(projectUuid).map((tasks) {
       final completedTasks = tasks.where((task) => task.completed).length;
       return {
         'total': tasks.length,
@@ -228,10 +224,14 @@ class AppDatabase extends _$AppDatabase {
   Future<Habit?> getHabitById(int id) {
     return (select(habits)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
+  
+  Future<Habit?> getHabitByUuid(String uuid) {
+    return (select(habits)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
+  }
 
   // Get habit logs for a specific habit
-  Future<List<HabitLog>> getHabitLogs(int habitId) {
-    return (select(habitLogs)..where((tbl) => tbl.habitId.equals(habitId))).get();
+  Future<List<HabitLog>> getHabitLogs(String habitUuid) {
+    return (select(habitLogs)..where((tbl) => tbl.habitUuid.equals(habitUuid))).get();
   }
 
   // Get habit logs for a specific date
@@ -246,44 +246,44 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Get habit log for specific habit and date
-  Future<HabitLog?> getHabitLogForDate(int habitId, DateTime date) {
+  Future<HabitLog?> getHabitLogForDate(String habitUuid, DateTime date) {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
     return (select(habitLogs)
           ..where((tbl) => 
-              tbl.habitId.equals(habitId) &
+              tbl.habitUuid.equals(habitUuid) &
               tbl.date.isBiggerOrEqualValue(startOfDay) & 
               tbl.date.isSmallerOrEqualValue(endOfDay)))
         .getSingleOrNull();
   }
 
   // Watch habit log for specific habit and date (stream)
-  Stream<HabitLog?> watchHabitLogForDate(int habitId, DateTime date) {
+  Stream<HabitLog?> watchHabitLogForDate(String habitUuid, DateTime date) {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
     return (select(habitLogs)
           ..where((tbl) => 
-              tbl.habitId.equals(habitId) &
+              tbl.habitUuid.equals(habitUuid) &
               tbl.date.isBiggerOrEqualValue(startOfDay) & 
               tbl.date.isSmallerOrEqualValue(endOfDay)))
         .watchSingleOrNull();
   }
 
   // Watch habit logs for a habit (stream)
-  Stream<List<HabitLog>> watchHabitLogs(int habitId) {
+  Stream<List<HabitLog>> watchHabitLogs(String habitUuid) {
     return (select(habitLogs)
-          ..where((tbl) => tbl.habitId.equals(habitId))
+          ..where((tbl) => tbl.habitUuid.equals(habitUuid))
           ..orderBy([(t) => OrderingTerm.desc(t.date)]))
         .watch();
   }
 
-  Stream<List<Reminder>> watchHabitReminders(int habitId) {
-    return (select(reminders)..where((tbl) => tbl.habitId.equals(habitId))).watch();
+  Stream<List<Reminder>> watchHabitReminders(String habitUuid) {
+    return (select(reminders)..where((tbl) => tbl.habitUuid.equals(habitUuid))).watch();
   }
 
-  Stream<HabitWithDetails> watchHabitWithDetails(int habitId) {
-    final habitStream = (select(habits)..where((tbl) => tbl.id.equals(habitId))).watchSingle();
-    final logsStream = watchHabitLogs(habitId);
+  Stream<HabitWithDetails> watchHabitWithDetails(String habitUuid) {
+    final habitStream = (select(habits)..where((tbl) => tbl.uuid.equals(habitUuid))).watchSingle();
+    final logsStream = watchHabitLogs(habitUuid);
 
     return Rx.combineLatest2(habitStream, logsStream, (habit, logs) {
       return HabitWithDetails(habit: habit, logs: logs);
@@ -291,26 +291,26 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Get last habit log for a habit
-  Future<HabitLog?> getLastHabitLog(int habitId) {
+  Future<HabitLog?> getLastHabitLog(String habitUuid) {
     return (select(habitLogs)
-          ..where((tbl) => tbl.habitId.equals(habitId))
+          ..where((tbl) => tbl.habitUuid.equals(habitUuid))
           ..orderBy([(t) => OrderingTerm.desc(t.date)])
           ..limit(1))
         .getSingleOrNull();
   }
 
   // Upsert habit log (update if exists for the date, insert if not)
-  Future<void> upsertHabitLog(int habitId, DateTime date, double amount) async {
-    final existingLog = await getHabitLogForDate(habitId, date);
+  Future<void> upsertHabitLog(String habitUuid, DateTime date, double amount) async {
+    final existingLog = await getHabitLogForDate(habitUuid, date);
     
     if (existingLog != null) {
       // Update existing log
       await updateHabitLog(existingLog.copyWith(amount: amount));
     } else {
       // Insert new log
-      await insertHabitLog(
+      await into(habitLogs).insert(
         HabitLogsCompanion.insert(
-          habitId: habitId,
+          habitUuid: habitUuid,
           date: Value(date),
           amount: Value(amount),
         ),
@@ -323,10 +323,10 @@ class AppDatabase extends _$AppDatabase {
       (delete(habitLogs)..where((tbl) => tbl.id.equals(id))).go();
 
   // Get habit logs within a date range
-  Future<List<HabitLog>> getHabitLogsInRange(int habitId, DateTime startDate, DateTime endDate) {
+  Future<List<HabitLog>> getHabitLogsInRange(String habitUuid, DateTime startDate, DateTime endDate) {
     return (select(habitLogs)
           ..where((tbl) => 
-              tbl.habitId.equals(habitId) &
+              tbl.habitUuid.equals(habitUuid) &
               tbl.date.isBiggerOrEqualValue(startDate) & 
               tbl.date.isSmallerOrEqualValue(endDate))
           ..orderBy([(t) => OrderingTerm.asc(t.date)]))
@@ -334,10 +334,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Get habit statistics for a specific period
-  Future<Map<String, dynamic>> getHabitStats(int habitId, {int days = 30}) async {
+  Future<Map<String, dynamic>> getHabitStats(String habitUuid, {int days = 30}) async {
     final endDate = DateTime.now();
     final startDate = endDate.subtract(Duration(days: days));
-    final logs = await getHabitLogsInRange(habitId, startDate, endDate);
+    final logs = await getHabitLogsInRange(habitUuid, startDate, endDate);
     
     if (logs.isEmpty) {
       return {
@@ -389,7 +389,7 @@ class AppDatabase extends _$AppDatabase {
     if (currentStreak > 0 && currentStreak < tempStreak) currentStreak = tempStreak;
 
     // Calculate completion rate (logs vs expected days)
-    final habit = await getHabitById(habitId);
+    final habit = await getHabitByUuid(habitUuid);
     int expectedDays = days;
     if (habit != null && habit.interval == 'custom' && habit.customDays != null) {
       // Calculate expected days based on custom schedule
@@ -418,10 +418,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Get daily logs for chart (last N days)
-  Future<Map<DateTime, double>> getDailyHabitLogs(int habitId, {int days = 30}) async {
+  Future<Map<DateTime, double>> getDailyHabitLogs(String habitUuid, {int days = 30}) async {
     final endDate = DateTime.now();
     final startDate = endDate.subtract(Duration(days: days - 1));
-    final logs = await getHabitLogsInRange(habitId, startDate, endDate);
+    final logs = await getHabitLogsInRange(habitUuid, startDate, endDate);
     
     final Map<DateTime, double> dailyData = {};
     for (var log in logs) {
@@ -433,10 +433,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Get weekly aggregated data
-  Future<List<Map<String, dynamic>>> getWeeklyHabitStats(int habitId, {int weeks = 12}) async {
+  Future<List<Map<String, dynamic>>> getWeeklyHabitStats(String habitUuid, {int weeks = 12}) async {
     final endDate = DateTime.now();
     final startDate = endDate.subtract(Duration(days: weeks * 7));
-    final logs = await getHabitLogsInRange(habitId, startDate, endDate);
+    final logs = await getHabitLogsInRange(habitUuid, startDate, endDate);
     
     final Map<int, List<HabitLog>> weeklyLogs = {};
     
@@ -477,6 +477,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<NoteFolder?> getNoteFolderById(int id) =>
       (select(noteFolders)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+      
+  Future<NoteFolder?> getNoteFolderByUuid(String uuid) =>
+      (select(noteFolders)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
 
   Future<int> insertNoteFolder(NoteFoldersCompanion folder) => into(noteFolders).insert(folder);
 
@@ -489,21 +492,24 @@ class AppDatabase extends _$AppDatabase {
   
   Stream<List<Note>> watchNotes() => select(notes).watch();
 
-  Stream<List<Note>> watchNotesByFolder(int? folderId) {
-    if (folderId == null) {
-      return (select(notes)..where((tbl) => tbl.folderId.isNull())).watch();
+  Stream<List<Note>> watchNotesByFolder(String? folderUuid) {
+    if (folderUuid == null) {
+      return (select(notes)..where((tbl) => tbl.folderUuid.isNull())).watch();
     }
-    return (select(notes)..where((tbl) => tbl.folderId.equals(folderId))).watch();
+    return (select(notes)..where((tbl) => tbl.folderUuid.equals(folderUuid))).watch();
   }
 
   Future<Note?> getNoteById(int id) =>
       (select(notes)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+      
+  Future<Note?> getNoteByUuid(String uuid) =>
+      (select(notes)..where((tbl) => tbl.uuid.equals(uuid))).getSingleOrNull();
 
-  Future<List<Note>> getNotesByFolder(int? folderId) {
-    if (folderId == null) {
-      return (select(notes)..where((tbl) => tbl.folderId.isNull())).get();
+  Future<List<Note>> getNotesByFolder(String? folderUuid) {
+    if (folderUuid == null) {
+      return (select(notes)..where((tbl) => tbl.folderUuid.isNull())).get();
     }
-    return (select(notes)..where((tbl) => tbl.folderId.equals(folderId))).get();
+    return (select(notes)..where((tbl) => tbl.folderUuid.equals(folderUuid))).get();
   }
 
   Future<List<Note>> getPinnedNotes() =>
@@ -528,10 +534,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   // Get count of todos linked to a note
-  Future<int> getLinkedTodosCount(int noteId) async {
+  Future<int> getLinkedTodosCount(String noteUuid) async {
     final query = selectOnly(todos)
       ..addColumns([todos.id.count()])
-      ..where(todos.noteId.equals(noteId));
+      ..where(todos.noteUuid.equals(noteUuid));
     
     final result = await query.getSingle();
     return result.read(todos.id.count()) ?? 0;
@@ -555,19 +561,19 @@ class AppDatabase extends _$AppDatabase {
   Future<int> deleteTag(int id) => (delete(tags)..where((tbl) => tbl.id.equals(id))).go();
 
   // Note-Tag relationships
-  Future<List<Tag>> getTagsForNote(int noteId) async {
+  Future<List<Tag>> getTagsForNote(String noteUuid) async {
     final query = select(noteTags).join([
-      innerJoin(tags, tags.id.equalsExp(noteTags.tagId))
-    ])..where(noteTags.noteId.equals(noteId));
+      innerJoin(tags, tags.uuid.equalsExp(noteTags.tagUuid))
+    ])..where(noteTags.noteUuid.equals(noteUuid));
     
     final results = await query.get();
     return results.map((row) => row.readTable(tags)).toList();
   }
 
-  Future<List<Note>> getNotesByTag(int tagId) async {
+  Future<List<Note>> getNotesByTag(String tagUuid) async {
     final query = select(noteTags).join([
-      innerJoin(notes, notes.id.equalsExp(noteTags.noteId))
-    ])..where(noteTags.tagId.equals(tagId));
+      innerJoin(notes, notes.uuid.equalsExp(noteTags.noteUuid))
+    ])..where(noteTags.tagUuid.equals(tagUuid));
     
     final results = await query.get();
     return results.map((row) => row.readTable(notes)).toList();
@@ -575,25 +581,25 @@ class AppDatabase extends _$AppDatabase {
 
   
 
-  Future<int> addTagToNote(int noteId, int tagId) =>
+  Future<int> addTagToNote(String noteUuid, String tagUuid) =>
       into(noteTags).insert(NoteTagsCompanion.insert(
-        noteId: noteId,
-        tagId: tagId,
+        noteUuid: noteUuid,
+        tagUuid: tagUuid,
       ));
 
-  Future<int> removeTagFromNote(int noteId, int tagId) =>
+  Future<int> removeTagFromNote(String noteUuid, String tagUuid) =>
       (delete(noteTags)
             ..where((tbl) => 
-                tbl.noteId.equals(noteId) & tbl.tagId.equals(tagId)))
+                tbl.noteUuid.equals(noteUuid) & tbl.tagUuid.equals(tagUuid)))
           .go();
 
-  Future<void> setNoteTags(int noteId, List<int> tagIds) async {
+  Future<void> setNoteTags(String noteUuid, List<String> tagUuids) async {
     // Remove all existing tags
-    await (delete(noteTags)..where((tbl) => tbl.noteId.equals(noteId))).go();
+    await (delete(noteTags)..where((tbl) => tbl.noteUuid.equals(noteUuid))).go();
     
     // Add new tags
-    for (final tagId in tagIds) {
-      await addTagToNote(noteId, tagId);
+    for (final tagUuid in tagUuids) {
+      await addTagToNote(noteUuid, tagUuid);
     }
   }
 
@@ -606,7 +612,7 @@ class AppDatabase extends _$AppDatabase {
         final endDate = DateTime(today.year, today.month, today.day);
         // The grid in habits_page.dart shows 180 days.
         final startDate = endDate.subtract(const Duration(days: 180));
-        final recentLogsList = await getHabitLogsInRange(habit.id, startDate, endDate);
+        final recentLogsList = await getHabitLogsInRange(habit.uuid, startDate, endDate);
 
         final recentLogs = <String, HabitLog>{};
         for (final log in recentLogsList) {
@@ -629,4 +635,3 @@ class AppDatabase extends _$AppDatabase {
 QueryExecutor _openConnection() {
   return driftDatabase(name: 'app_database');
 }
-

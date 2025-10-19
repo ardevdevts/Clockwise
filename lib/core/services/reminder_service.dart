@@ -9,39 +9,39 @@ class ReminderService {
   ReminderService(this._database, this._notificationService);
 
   // Add a task reminder
-  Future<void> addTaskReminder(int todoId, DateTime remindAt) async {
+  Future<void> addTaskReminder(String todoUuid, DateTime remindAt) async {
     // Save to database
     await _database.insertReminder(
       RemindersCompanion.insert(
-        todoId: drift.Value(todoId),
+        todoUuid: drift.Value(todoUuid),
         remindAt: remindAt,
         recurring: drift.Value(false),
       ),
     );
 
     // Schedule notification
-    final todo = await _database.getTodoById(todoId);
+    final todo = await _database.getTodoByUuid(todoUuid);
     if (todo != null) {
       await _notificationService.scheduleTaskReminder(todo, remindAt);
     }
   }
 
   // Add a habit reminder (can be recurring)
-  Future<void> addHabitReminder(int habitId, DateTime remindAt, {bool recurring = true}) async {
+  Future<void> addHabitReminder(String habitUuid, DateTime remindAt, {bool recurring = true}) async {
     // Save to database
     final reminderId = await _database.insertReminder(
       RemindersCompanion.insert(
-        habitId: drift.Value(habitId),
+        habitUuid: drift.Value(habitUuid),
         remindAt: remindAt,
         recurring: drift.Value(recurring),
       ),
     );
 
     // Schedule notification
-    final habit = await _database.getHabitById(habitId);
+    final habit = await _database.getHabitByUuid(habitUuid);
     if (habit != null) {
       // Use reminder ID + habitId to create unique notification ID
-      final notificationId = _generateNotificationId(habitId, reminderId);
+      final notificationId = _generateNotificationId(habit.id, reminderId);
       await _notificationService.scheduleHabitReminder(habit, remindAt, notificationId);
     }
   }
@@ -54,15 +54,15 @@ class ReminderService {
   }
 
   // Get all reminders for a task
-  Future<List<Reminder>> getTaskReminders(int todoId) async {
+  Future<List<Reminder>> getTaskReminders(String todoUuid) async {
     final allReminders = await _database.allReminders;
-    return allReminders.where((r) => r.todoId == todoId).toList();
+    return allReminders.where((r) => r.todoUuid == todoUuid).toList();
   }
 
   // Get all reminders for a habit
-  Future<List<Reminder>> getHabitReminders(int habitId) async {
+  Future<List<Reminder>> getHabitReminders(String habitUuid) async {
     final allReminders = await _database.allReminders;
-    return allReminders.where((r) => r.habitId == habitId).toList();
+    return allReminders.where((r) => r.habitUuid == habitUuid).toList();
   }
 
   // Reschedule all reminders (useful after app restart)
@@ -95,15 +95,15 @@ class ReminderService {
 
   // Schedule a reminder notification
   Future<void> _scheduleReminder(Reminder reminder) async {
-    if (reminder.todoId != null) {
-      final todo = await _database.getTodoById(reminder.todoId!);
+    if (reminder.todoUuid != null) {
+      final todo = await _database.getTodoByUuid(reminder.todoUuid!);
       if (todo != null) {
         await _notificationService.scheduleTaskReminder(todo, reminder.remindAt);
       }
-    } else if (reminder.habitId != null) {
-      final habit = await _database.getHabitById(reminder.habitId!);
+    } else if (reminder.habitUuid != null) {
+      final habit = await _database.getHabitByUuid(reminder.habitUuid!);
       if (habit != null) {
-        final notificationId = _generateNotificationId(reminder.habitId!, reminder.id);
+        final notificationId = _generateNotificationId(habit.id, reminder.id);
         await _notificationService.scheduleHabitReminder(habit, reminder.remindAt, notificationId);
       }
     }
@@ -141,16 +141,16 @@ class ReminderService {
   }
 
   // Delete all reminders for a task
-  Future<void> deleteTaskReminders(int todoId) async {
-    final reminders = await getTaskReminders(todoId);
+  Future<void> deleteTaskReminders(String todoUuid) async {
+    final reminders = await getTaskReminders(todoUuid);
     for (final reminder in reminders) {
       await removeReminder(reminder.id);
     }
   }
 
   // Delete all reminders for a habit
-  Future<void> deleteHabitReminders(int habitId) async {
-    final reminders = await getHabitReminders(habitId);
+  Future<void> deleteHabitReminders(String habitUuid) async {
+    final reminders = await getHabitReminders(habitUuid);
     for (final reminder in reminders) {
       await removeReminder(reminder.id);
     }
