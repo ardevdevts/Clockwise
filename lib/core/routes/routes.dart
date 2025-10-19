@@ -3,25 +3,29 @@ import 'package:go_router/go_router.dart';
 import '../../features/tasks/tasks_page.dart';
 import '../../features/habits/habits_page.dart';
 import '../../features/notes/notes_page.dart';
+import '../../features/auth/login_page.dart';
 import '../scaffold_with_navbar.dart';
 
 int numberOfDestinations = 3;
 
 final appRouter = GoRouter(
   routes: [
+    // Login route
+    GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+    // Main app routes with bottom navigation
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return SafeArea(
-          child: ScaffoldWithNavBar(navigationShell: navigationShell, numberOfDestinations: numberOfDestinations),
+          child: ScaffoldWithNavBar(
+            navigationShell: navigationShell,
+            numberOfDestinations: numberOfDestinations,
+          ),
         );
       },
       branches: [
         StatefulShellBranch(
           routes: [
-            GoRoute(
-              path: '/',
-              builder: (context, state) => const TasksPage(),
-            ),
+            GoRoute(path: '/', builder: (context, state) => const TasksPage()),
           ],
         ),
         StatefulShellBranch(
@@ -44,5 +48,3 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-
