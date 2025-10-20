@@ -4,12 +4,16 @@ import '../../features/tasks/tasks_page.dart';
 import '../../features/habits/habits_page.dart';
 import '../../features/notes/notes_page.dart';
 import '../../features/auth/login_page.dart';
+import '../../features/auth/welcome_page.dart';
 import '../scaffold_with_navbar.dart';
 
 int numberOfDestinations = 3;
 
 final appRouter = GoRouter(
+  initialLocation: '/welcome',
   routes: [
+    // Welcome/Splash route
+    GoRoute(path: '/welcome', builder: (context, state) => const WelcomePage()),
     // Login route
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     // Main app routes with bottom navigation
