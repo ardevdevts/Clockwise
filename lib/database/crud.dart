@@ -467,8 +467,9 @@ class AppDatabase extends _$AppDatabase {
       lastDate = logDate;
     }
     if (tempStreak > longestStreak) longestStreak = tempStreak;
-    if (currentStreak > 0 && currentStreak < tempStreak)
+    if (currentStreak > 0 && currentStreak < tempStreak) {
       currentStreak = tempStreak;
+    }
 
     // Calculate completion rate (logs vs expected days)
     final habit = await getHabitByUuid(habitUuid);

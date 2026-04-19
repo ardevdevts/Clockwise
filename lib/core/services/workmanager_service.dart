@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:workmanager/workmanager.dart';
 import '../../database/crud.dart';
 import 'notification_service.dart';
@@ -75,6 +76,11 @@ class WorkManagerService {
   WorkManagerService._internal();
 
   Future<void> initialize() async {
+    // Workmanager is only supported on Android and iOS
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return;
+    }
+
     await Workmanager().initialize(
       callbackDispatcher,
       isInDebugMode: false,
@@ -97,6 +103,9 @@ class WorkManagerService {
 
   // Trigger one-time reminder rescheduling
   Future<void> rescheduleReminders() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return;
+    }
     await Workmanager().registerOneOffTask(
       'rescheduleReminders-${DateTime.now().millisecondsSinceEpoch}',
       'rescheduleReminders',
@@ -105,6 +114,9 @@ class WorkManagerService {
 
   // Cancel all background tasks
   Future<void> cancelAll() async {
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      return;
+    }
     await Workmanager().cancelAll();
   }
 }

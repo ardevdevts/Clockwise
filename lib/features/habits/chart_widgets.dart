@@ -283,8 +283,9 @@ class WeeklyTrendChart extends ConsumerWidget {
                     showTitles: true,
                     reservedSize: 30,
                     getTitlesWidget: (value, meta) {
-                      if (value.toInt() >= weeklyStats.length)
+                      if (value.toInt() >= weeklyStats.length) {
                         return const Text('');
+                      }
                       final weekStart =
                           weeklyStats[value.toInt()]['weekStart'] as DateTime;
                       return Padding(
