@@ -50,6 +50,7 @@ dependencies:
   url_launcher: ^6.3.1
   image_picker: ^1.1.2
   photo_view: ^0.15.0
+  super_editor: 0.3.0-dev.23
   flutter_quill: ^11.4.2
   flutter_quill_delta_from_html: ^1.5.3
   markdown_quill: ^4.3.0

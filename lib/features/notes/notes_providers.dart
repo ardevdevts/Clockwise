@@ -1,7 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Selected folder (null = all notes, 'pinned' = pinned, 'favorites' = favorites)
-final selectedFolderProvider = StateProvider<String?>((ref) => null);
+import 'file_notes_models.dart';
+import 'file_notes_repository.dart';
 
-// Selected tag filter
-final selectedTagProvider = StateProvider<String?>((ref) => null);
+final fileNotesRepositoryProvider = Provider<FileNotesRepository>((ref) {
+  final repository = FileNotesRepository();
+  repository.initialize();
+  ref.onDispose(repository.dispose);
+  return repository;
+});
+
+final workspacesProvider = StreamProvider<List<NoteWorkspace>>((ref) {
+  final repository = ref.watch(fileNotesRepositoryProvider);
+  return repository.watchWorkspaces();
+});
+
+final selectedWorkspaceIdProvider = StateProvider<String?>((ref) => null);
+final selectedFileNodeProvider = StateProvider<NoteFileNode?>((ref) => null);
